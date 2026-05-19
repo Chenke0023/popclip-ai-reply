@@ -11,7 +11,14 @@ api_key_file_raw="${POPCLIP_OPTION_API_KEY_FILE:-}"
 endpoint="${POPCLIP_OPTION_ENDPOINT:-}"
 api_key_pool_file_raw="${POPCLIP_OPTION_API_KEY_POOL_FILE:-}"
 api_key_pool="${POPCLIP_OPTION_API_KEY_POOL:-}"
-settings_model="${POPCLIP_OPTION_MODEL:-}"
+settings_model_raw="${POPCLIP_OPTION_MODEL:-}"
+# Settings field may be a sentinel (__picker__ / __custom__); resolve to a
+# concrete model id for "current selection" display purposes only.
+case "${settings_model_raw}" in
+  __picker__|"") settings_model="" ;;
+  __custom__)    settings_model="${POPCLIP_OPTION_MODEL_CUSTOM:-}" ;;
+  *)             settings_model="${settings_model_raw}" ;;
+esac
 
 script_dir="${0:A:h}"
 lib_dir="${script_dir}/lib"

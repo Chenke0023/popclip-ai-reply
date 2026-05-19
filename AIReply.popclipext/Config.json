@@ -41,10 +41,52 @@
     },
     {
       "identifier": "model",
-      "type": "string",
+      "type": "multiple",
       "label": "Model",
-      "defaultValue": "gpt-4o-mini",
-      "description": "Default model. Overridden when Pick Model has been used (selection lives in ~/.config/popclip-aireply/selected_model). Falls back to gpt-4o-mini if empty."
+      "defaultValue": "__picker__",
+      "values": [
+        "__picker__",
+        "__custom__",
+        "gpt-4o-mini",
+        "gpt-4.1-mini",
+        "gpt-4.1-nano",
+        "deepseek-ai/DeepSeek-V3.2",
+        "deepseek-ai/DeepSeek-V3.1-Terminus",
+        "deepseek-ai/deepseek-v4-flash",
+        "deepseek-ai/deepseek-v4-pro",
+        "deepseek-ai/deepseek-r1-0528",
+        "moonshotai/Kimi-K2-Instruct-0905",
+        "moonshotai/kimi-k2-thinking",
+        "moonshotai/kimi-k2.5",
+        "bytedance/seed-oss-36b-instruct",
+        "minimaxai/minimax-m2.7",
+        "google/gemma-4-31b-it"
+      ],
+      "valueLabels": [
+        "🎯 Use Pick Model selection",
+        "🛠 Custom (see field below)",
+        "gpt-4o-mini",
+        "gpt-4.1-mini",
+        "gpt-4.1-nano",
+        "DeepSeek V3.2",
+        "DeepSeek V3.1 Terminus",
+        "DeepSeek V4 Flash",
+        "DeepSeek V4 Pro",
+        "DeepSeek R1 (0528)",
+        "Kimi K2 Instruct (0905)",
+        "Kimi K2 Thinking",
+        "Kimi K2.5",
+        "Bytedance Seed-OSS 36B",
+        "MiniMax M2.7",
+        "Gemma 4 31B IT"
+      ],
+      "description": "Pick from the list. '🎯 Use Pick Model' defers to the model chosen via the Pick Model action (~/.config/popclip-aireply/selected_model). '🛠 Custom' uses the Custom Model field below."
+    },
+    {
+      "identifier": "model_custom",
+      "type": "string",
+      "label": "Custom Model",
+      "description": "Used only when Model is set to '🛠 Custom'. Type any model id (e.g. claude-3-5-sonnet-20241022)."
     },
     {
       "identifier": "temperature",

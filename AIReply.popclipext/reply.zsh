@@ -497,15 +497,34 @@ APPLESCRIPT
 
 # ------------------------------- main -----------------------------------
 
-# Resolve model — Pick Model file (most recent explicit action) wins over the
-# PopClip settings field; settings wins over build_payload.py's hardcoded
-# fallback. To revert to the settings value, delete the file or run Pick Model
-# and cancel-with-Reset (handled inside models.zsh).
-selected_model_file="${HOME}/.config/popclip-aireply/selected_model"
-if [[ -s "${selected_model_file}" ]]; then
-  picked="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
-  [[ -n "${picked}" ]] && model="${picked}"
-fi
+# Resolve model — three sources, in order:
+#   1. Settings field is a sentinel:
+#        __picker__ → use the Pick Model file (~/.config/popclip-aireply/selected_model)
+#        __custom__ → use the Custom Model string field
+#   2. Settings field is a concrete model id → use it verbatim.
+#   3. Empty / unknown → fall back to the picker file, then to build_payload.py's
+#      hardcoded default.
+case "${model}" in
+  __picker__|"")
+    selected_model_file="${HOME}/.config/popclip-aireply/selected_model"
+    if [[ -s "${selected_model_file}" ]]; then
+      picked="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
+      [[ -n "${picked}" ]] && model="${picked}" || model=""
+    else
+      model=""
+    fi
+    ;;
+  __custom__)
+    model="${POPCLIP_OPTION_MODEL_CUSTOM:-}"
+    if [[ -z "${model//[[:space:]]/}" ]]; then
+      # Custom selected but field is blank — fall through to picker, then default.
+      selected_model_file="${HOME}/.config/popclip-aireply/selected_model"
+      if [[ -s "${selected_model_file}" ]]; then
+        model="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
+      fi
+    fi
+    ;;
+esac
 
 # Resolve API key — settings field > env var > file.
 if [[ -z "${api_key}" ]]; then
