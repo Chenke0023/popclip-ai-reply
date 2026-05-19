@@ -1,0 +1,115 @@
+{
+  "name": "AI Reply Enhanced",
+  "identifier": "com.local.aireply.enhanced.popclip",
+  "description": "Generate email replies via an OpenAI-compatible endpoint. Supports style presets, follow-up rewrites, API key pool with smart retry, and auto language-matching.",
+  "icon": "square filled symbol:arrowshape.turn.up.left",
+  "popclipVersion": 4150,
+  "captureHtml": true,
+  "options": [
+    {
+      "identifier": "api_key",
+      "type": "string",
+      "label": "API Key",
+      "description": "API key for the endpoint (stored in PopClip preferences). Leave empty to use API Key File or AI_REPLY_API_KEY env var."
+    },
+    {
+      "identifier": "api_key_file",
+      "type": "string",
+      "label": "API Key File",
+      "defaultValue": "~/.config/popclip-aireply/api_key",
+      "description": "Path to a file containing the API key (first non-empty line is used). Recommended over storing the key in PopClip preferences."
+    },
+    {
+      "identifier": "endpoint",
+      "type": "string",
+      "label": "Endpoint",
+      "defaultValue": "https://ai.hybgzs.com/v1",
+      "description": "Base URL for an OpenAI-compatible chat-completions endpoint. No trailing slash."
+    },
+    {
+      "identifier": "api_key_pool_file",
+      "type": "string",
+      "label": "API Key Pool File",
+      "defaultValue": "~/.config/popclip-aireply/pool.json",
+      "description": "Optional. Path to a JSON file: [{\"api_key\":\"...\",\"endpoint\":\"...\"}, ...]. When non-empty, the pool is used and 429/5xx errors retry on a different key."
+    },
+    {
+      "identifier": "api_key_pool",
+      "type": "string",
+      "label": "API Key Pool (inline)",
+      "description": "Optional fallback. Same JSON shape as the pool file, pasted inline. The pool file takes priority when set."
+    },
+    {
+      "identifier": "model",
+      "type": "string",
+      "label": "Model",
+      "defaultValue": "gpt-4o-mini"
+    },
+    {
+      "identifier": "temperature",
+      "type": "string",
+      "label": "Temperature",
+      "defaultValue": "0.4",
+      "description": "0.0 – 2.0. Leave empty for default (0.4)."
+    },
+    {
+      "identifier": "auto_language",
+      "type": "boolean",
+      "label": "🌐 Reply in Source Language",
+      "defaultValue": true,
+      "description": "Instruct the model to reply in the same language as the original email."
+    },
+    {
+      "identifier": "reply_style",
+      "type": "multiple",
+      "label": "✨ Default Style",
+      "defaultValue": "professional",
+      "values": ["professional", "friendly", "concise"],
+      "valueLabels": ["正式 Professional", "友好 Friendly", "简洁 Concise"]
+    },
+    {
+      "identifier": "prompt_style_selection",
+      "type": "boolean",
+      "label": "🎯 Prompt Before Each Reply",
+      "defaultValue": true,
+      "description": "Show a dialog before generating, letting you add extra instructions and override the style. Uncheck to generate immediately with the default style."
+    },
+    {
+      "identifier": "auto_copy",
+      "type": "boolean",
+      "label": "📋 Auto Copy to Clipboard",
+      "defaultValue": true
+    },
+    {
+      "identifier": "show_language_badge",
+      "type": "boolean",
+      "label": "🏷️ Show Language Badge",
+      "defaultValue": true,
+      "description": "Display the detected language in the result dialog."
+    },
+    {
+      "identifier": "save_history",
+      "type": "boolean",
+      "label": "🗂️ Save History",
+      "defaultValue": false,
+      "description": "Append each successful generation to ~/Library/Logs/AIReplyPopClip/history.jsonl"
+    }
+  ],
+  "actions": [
+    {
+      "title": "AI Reply",
+      "after": "show-result",
+      "shellScriptFile": "reply.zsh",
+      "interpreter": "/bin/zsh",
+      "stdin": "markdown",
+      "icon": "square filled symbol:arrowshape.turn.up.left"
+    },
+    {
+      "title": "Get Models",
+      "after": "ignore",
+      "shellScriptFile": "models.zsh",
+      "interpreter": "/bin/zsh",
+      "icon": "square filled symbol:list.bullet"
+    }
+  ]
+}

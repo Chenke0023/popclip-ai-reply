@@ -1,0 +1,24 @@
+# Earlier / duplicate copies of the extension — kept locally but not versioned.
+_archive/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs / runtime artefacts (the extension writes these under
+# ~/Library/Logs/AIReplyPopClip, which is outside the repo, but guard the names
+# in case anyone redirects them inside the working tree).
+*.log
+last_*.txt
+last_*.json
+history.jsonl
