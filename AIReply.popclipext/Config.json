@@ -93,6 +93,20 @@
       "label": "🗂️ Save History",
       "defaultValue": false,
       "description": "Append each successful generation to ~/Library/Logs/AIReplyPopClip/history.jsonl"
+    },
+    {
+      "identifier": "mail_thread_context",
+      "type": "boolean",
+      "label": "📬 Mail.app Thread Context",
+      "defaultValue": true,
+      "description": "When Mail.app is frontmost and no text is selected, automatically fetch the current email thread. Requires Accessibility permission for PopClip/Terminal."
+    },
+    {
+      "identifier": "mail_max_messages",
+      "type": "string",
+      "label": "📬 Max Thread Messages",
+      "defaultValue": "5",
+      "description": "Maximum number of thread messages to include as context (1–20). Older messages beyond this limit are ignored."
     }
   ],
   "actions": [

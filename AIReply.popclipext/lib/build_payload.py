@@ -12,6 +12,7 @@ Reads:
   AI_REPLY_STYLE              - professional|friendly|concise
   AI_REPLY_DRAFT_REPLY        - previous draft (for Follow Up)
   AI_REPLY_FOLLOWUP_PROMPT    - follow-up instruction (for Follow Up)
+  AI_REPLY_MAIL_THREAD_JSON   - JSON from fetch_mail_thread.py (optional)
 
 Writes:
   stdout: payload JSON
@@ -46,6 +47,7 @@ def main() -> int:
     followup = (os.environ.get("AI_REPLY_FOLLOWUP_PROMPT") or "").strip()
     auto_language = _truthy(os.environ.get("AI_REPLY_AUTO_LANGUAGE", "true"))
     reply_style = (os.environ.get("AI_REPLY_STYLE") or "professional").strip().lower()
+    mail_thread_raw = (os.environ.get("AI_REPLY_MAIL_THREAD_JSON") or "").strip()
 
     if reply_style not in STYLE_INSTRUCTIONS:
         reply_style = "professional"
@@ -69,6 +71,39 @@ def main() -> int:
             system_prompt += " Reply in the same language as the original email."
 
     parts = []
+
+    # ── Mail thread context ────────────────────────────────────────────────
+    # Prepend conversation history (oldest first) so the model sees the full
+    # exchange before the current task. Silently ignore malformed JSON.
+    if mail_thread_raw:
+        try:
+            thread_data = json.loads(mail_thread_raw)
+            subject = thread_data.get("subject", "")
+            thread = thread_data.get("thread", [])
+            latest = thread_data.get("latest", {})
+
+            # 'thread' from AppleScript is newest-first; reverse to oldest-first
+            # and drop the latest message (it's already the main input_text).
+            history_msgs = [m for m in reversed(thread)
+                            if m.get("body", "").strip() != latest.get("body", "").strip()]
+
+            if subject:
+                parts.append(f"Email subject: {subject}")
+
+            if history_msgs:
+                history_lines = []
+                for m in history_msgs:
+                    history_lines.append(
+                        f"[{m.get('date', '')}] {m.get('from', '')}:\n{m.get('body', '').strip()}"
+                    )
+                parts.append(
+                    "--- Previous messages in this thread (oldest first) ---\n"
+                    + "\n\n".join(history_lines)
+                    + "\n--- End of thread history ---"
+                )
+        except (json.JSONDecodeError, KeyError):
+            pass
+
     if user_prompt:
         parts.append("User instructions:\n" + user_prompt)
     if runtime_prompt:

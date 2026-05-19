@@ -23,6 +23,7 @@ auto_language="${POPCLIP_OPTION_AUTO_LANGUAGE:-true}"
 reply_style="${POPCLIP_OPTION_REPLY_STYLE:-professional}"
 prompt_style_selection="${POPCLIP_OPTION_PROMPT_STYLE_SELECTION:-true}"
 auto_copy="${POPCLIP_OPTION_AUTO_COPY:-true}"
+mail_thread_context="${POPCLIP_OPTION_MAIL_THREAD_CONTEXT:-true}"
 show_language_badge="${POPCLIP_OPTION_SHOW_LANGUAGE_BADGE:-true}"
 save_history="${POPCLIP_OPTION_SAVE_HISTORY:-false}"
 
@@ -531,10 +532,38 @@ fi
 
 endpoint="${endpoint%/}"
 
+# ── Mail.app thread auto-fetch ────────────────────────────────────────────
+# When enabled and Mail.app is frontmost, pull the open thread so the model
+# sees full conversation history even if the user selected no text. The
+# fetched JSON also acts as a fallback "input" further down so the rest of
+# the pipeline (language detection, dialogs, …) is unchanged.
+mail_thread_json=""
+if [[ "${mail_thread_context}" == "true" ]]; then
+  front_app="$(osascript -e \
+    'tell application "System Events" to get name of first process whose frontmost is true' \
+    2>/dev/null)"
+  if [[ "${front_app}" == "Mail" ]]; then
+    mail_thread_json="$(AI_REPLY_MAIL_MAX_MESSAGES="${POPCLIP_OPTION_MAIL_MAX_MESSAGES:-5}" \
+      python3 "${lib_dir}/fetch_mail_thread.py" 2>>"${debug_dir}/mail_thread_fetch.log")"
+    if (( $? != 0 )) || [[ -z "${mail_thread_json}" ]]; then
+      mail_thread_json=""
+    fi
+  fi
+fi
+export AI_REPLY_MAIL_THREAD_JSON="${mail_thread_json}"
+
 # Read selection from stdin (PopClip's markdown stream), fall back to env.
 input_from_stdin="$(cat)"
 if [[ -z "${input_from_stdin//[[:space:]]/}" ]]; then
   input_from_stdin="${POPCLIP_FULL_TEXT:-${POPCLIP_TEXT:-}}"
+fi
+# If still empty and we did fetch a Mail thread, use the latest body as input
+# so detect_language / build_payload have something to work with. The thread
+# history is delivered separately via AI_REPLY_MAIL_THREAD_JSON.
+if [[ -z "${input_from_stdin//[[:space:]]/}" && -n "${mail_thread_json}" ]]; then
+  input_from_stdin="$(python3 -c \
+    "import json,sys; d=json.loads(sys.argv[1]); print(d['latest']['body'])" \
+    "${mail_thread_json}" 2>/dev/null)"
 fi
 [[ -z "${input_from_stdin//[[:space:]]/}" ]] && error_exit "No input text selected."
 
