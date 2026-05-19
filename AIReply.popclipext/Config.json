@@ -43,7 +43,8 @@
       "identifier": "model",
       "type": "string",
       "label": "Model",
-      "defaultValue": "gpt-4o-mini"
+      "defaultValue": "gpt-4o-mini",
+      "description": "Default model. Overridden when Pick Model has been used (selection lives in ~/.config/popclip-aireply/selected_model). Falls back to gpt-4o-mini if empty."
     },
     {
       "identifier": "temperature",
@@ -119,7 +120,7 @@
       "icon": "square filled symbol:arrowshape.turn.up.left"
     },
     {
-      "title": "Get Models",
+      "title": "Pick Model",
       "after": "ignore",
       "shellScriptFile": "models.zsh",
       "interpreter": "/bin/zsh",

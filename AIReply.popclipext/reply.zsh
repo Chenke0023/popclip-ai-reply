@@ -497,6 +497,16 @@ APPLESCRIPT
 
 # ------------------------------- main -----------------------------------
 
+# Resolve model — Pick Model file (most recent explicit action) wins over the
+# PopClip settings field; settings wins over build_payload.py's hardcoded
+# fallback. To revert to the settings value, delete the file or run Pick Model
+# and cancel-with-Reset (handled inside models.zsh).
+selected_model_file="${HOME}/.config/popclip-aireply/selected_model"
+if [[ -s "${selected_model_file}" ]]; then
+  picked="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
+  [[ -n "${picked}" ]] && model="${picked}"
+fi
+
 # Resolve API key — settings field > env var > file.
 if [[ -z "${api_key}" ]]; then
   api_key="${AI_REPLY_API_KEY:-}"
