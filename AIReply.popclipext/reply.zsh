@@ -624,33 +624,49 @@ if [[ "${save_history}" == "true" ]]; then
 fi
 
 if [[ "${AI_REPLY_HEADLESS:-}" != "1" ]]; then
-  # Write session state to a temp file and hand off to the background
-  # dialog handler so this script can exit immediately (spinner disappears).
+  # Write session state as JSON and hand off to the background dialog
+  # handler so this script can exit immediately (spinner disappears).
+  # Using JSON avoids the shell-injection and escaping pitfalls of
+  # serialising to shell source code.
   local session_tmp
   session_tmp="$(mktemp -t aireply.session.XXXXXX)"
-  {
-    print -r -- "current_reply=${current_reply}"
-    print -r -- "input_from_stdin=${input_from_stdin}"
-    print -r -- "user_prompt=${user_prompt}"
-    print -r -- "runtime_prompt=${runtime_prompt}"
-    print -r -- "system_prompt=${system_prompt}"
-    print -r -- "model=${model}"
-    print -r -- "temperature_raw=${temperature_raw}"
-    print -r -- "auto_language=${auto_language}"
-    print -r -- "reply_style=${reply_style}"
-    print -r -- "auto_copy=${auto_copy}"
-    print -r -- "show_language_badge=${show_language_badge}"
-    print -r -- "save_history=${save_history}"
-    print -r -- "history_path=${history_path}"
-    print -r -- "detected_language=${detected_language}"
-    print -r -- "api_key=${api_key}"
-    print -r -- "endpoint=${endpoint}"
-    print -r -- "api_key_pool=${api_key_pool}"
-    print -r -- "api_key_pool_file_raw=${api_key_pool_file_raw}"
-    print -r -- "lib_dir=${lib_dir}"
-    print -r -- "debug_dir=${debug_dir}"
-    print -r -- "mail_thread_json=${mail_thread_json}"
-  } > "${session_tmp}"
+  chmod 600 "${session_tmp}"
+
+  export _AIR_SESS_CURRENT_REPLY="${current_reply}"
+  export _AIR_SESS_INPUT="${input_from_stdin}"
+  export _AIR_SESS_USER_PROMPT="${user_prompt}"
+  export _AIR_SESS_RUNTIME_PROMPT="${runtime_prompt}"
+  export _AIR_SESS_SYSTEM_PROMPT="${system_prompt}"
+  export _AIR_SESS_MODEL="${model}"
+  export _AIR_SESS_TEMPERATURE_RAW="${temperature_raw}"
+  export _AIR_SESS_AUTO_LANGUAGE="${auto_language}"
+  export _AIR_SESS_REPLY_STYLE="${reply_style}"
+  export _AIR_SESS_AUTO_COPY="${auto_copy}"
+  export _AIR_SESS_SHOW_LANGUAGE_BADGE="${show_language_badge}"
+  export _AIR_SESS_SAVE_HISTORY="${save_history}"
+  export _AIR_SESS_HISTORY_PATH="${history_path}"
+  export _AIR_SESS_DETECTED_LANGUAGE="${detected_language}"
+  export _AIR_SESS_API_KEY="${api_key}"
+  export _AIR_SESS_ENDPOINT="${endpoint}"
+  export _AIR_SESS_API_KEY_POOL="${api_key_pool}"
+  export _AIR_SESS_API_KEY_POOL_FILE="${api_key_pool_file_raw}"
+  export _AIR_SESS_LIB_DIR="${lib_dir}"
+  export _AIR_SESS_DEBUG_DIR="${debug_dir}"
+  export _AIR_SESS_MAIL_THREAD_JSON="${mail_thread_json}"
+
+  python3 -c "
+import json, os
+keys = [
+  'current_reply', 'input_from_stdin', 'user_prompt', 'runtime_prompt',
+  'system_prompt', 'model', 'temperature_raw', 'auto_language',
+  'reply_style', 'auto_copy', 'show_language_badge', 'save_history',
+  'history_path', 'detected_language', 'api_key', 'endpoint',
+  'api_key_pool', 'api_key_pool_file_raw', 'lib_dir', 'debug_dir',
+  'mail_thread_json',
+]
+data = {k: os.environ.get(f'_AIR_SESS_{k.upper()}', '') for k in keys}
+print(json.dumps(data))
+" > "${session_tmp}"
 
   # Launch background handler and exit immediately.
   # The dialog process is detached so it outlives this script.

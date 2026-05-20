@@ -8,9 +8,9 @@
   "options": [
     {
       "identifier": "api_key",
-      "type": "string",
+      "type": "secret",
       "label": "API Key",
-      "description": "API key for the endpoint (stored in PopClip preferences). Leave empty to use API Key File or AI_REPLY_API_KEY env var."
+      "description": "API key for the endpoint (stored in keychain). Leave empty to use API Key File or AI_REPLY_API_KEY env var."
     },
     {
       "identifier": "api_key_file",

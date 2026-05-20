@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Background dialog + follow-up handler for AI Reply.
-# Called with a session file path (zsh source file created by reply.zsh).
+# Reads session state from a JSON file written by reply.zsh.
 
 set -u
 
@@ -9,16 +9,48 @@ if [[ -z "${session_file}" || ! -f "${session_file}" ]]; then
   exit 1
 fi
 
-source "${session_file}"
+lib_dir="${0:A:h}"
+debug_dir="${HOME}/Library/Logs/AIReplyPopClip"
 
-# Ensure required vars exist
-: "${current_reply}" "${lib_dir}" "${debug_dir}"
-
-# Clean up session file on exit
+# Clean up session file on exit.
 cleanup_session() {
   rm -f "${session_file}" 2>/dev/null || true
 }
 trap cleanup_session EXIT
+
+# --------------------------- JSON reader --------------------------------
+
+get_json_field() {
+  python3 -c "
+import json, sys
+data = json.loads(open(sys.argv[1]).read())
+print(data.get(sys.argv[2], ''))
+" "$1" "$2"
+}
+
+# --------------------------- load session --------------------------------
+
+current_reply="$(     get_json_field "${session_file}" current_reply)"
+input_from_stdin="$(  get_json_field "${session_file}" input_from_stdin)"
+user_prompt="$(       get_json_field "${session_file}" user_prompt)"
+runtime_prompt="$(    get_json_field "${session_file}" runtime_prompt)"
+system_prompt="$(     get_json_field "${session_file}" system_prompt)"
+model="$(             get_json_field "${session_file}" model)"
+temperature_raw="$(   get_json_field "${session_file}" temperature_raw)"
+auto_language="$(     get_json_field "${session_file}" auto_language)"
+reply_style="$(       get_json_field "${session_file}" reply_style)"
+auto_copy="$(         get_json_field "${session_file}" auto_copy)"
+show_language_badge="$( get_json_field "${session_file}" show_language_badge)"
+save_history="$(      get_json_field "${session_file}" save_history)"
+history_path="$(      get_json_field "${session_file}" history_path)"
+detected_language="$( get_json_field "${session_file}" detected_language)"
+api_key="$(           get_json_field "${session_file}" api_key)"
+endpoint="$(          get_json_field "${session_file}" endpoint)"
+api_key_pool="$(      get_json_field "${session_file}" api_key_pool)"
+api_key_pool_file_raw="$( get_json_field "${session_file}" api_key_pool_file_raw)"
+mail_thread_json="$(  get_json_field "${session_file}" mail_thread_json)"
+
+: "${current_reply}" "${lib_dir}" "${debug_dir}" "${history_path}"
 
 # ------------------------------- utils ----------------------------------
 
