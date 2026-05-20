@@ -136,104 +136,6 @@ APPLESCRIPT
   return 0
 }
 
-show_reply_dialog() {
-  if [[ "${AI_REPLY_HEADLESS:-}" == "1" ]]; then
-    return 0
-  fi
-
-  local style_label
-  case "${reply_style}" in
-    friendly) style_label="😊 Friendly" ;;
-    concise)  style_label="📝 Concise" ;;
-    *)        style_label="✨ Professional" ;;
-  esac
-
-  local meta="${style_label}"
-  if [[ "${show_language_badge}" == "true" && -n "${detected_language}" ]]; then
-    meta="🌐 ${detected_language} | ${style_label}"
-  fi
-
-  # Pass the reply / meta through tmp files so UTF-8 survives — `system attribute`
-  # mangles multi-byte text under the system text encoding.
-  local reply_tmp meta_tmp out_tmp
-  reply_tmp="$(mktemp -t aireply.reply.XXXXXX)"
-  meta_tmp="$(mktemp -t aireply.meta.XXXXXX)"
-  out_tmp="$(mktemp -t aireply.out.XXXXXX)"
-  print -rn -- "$1" > "${reply_tmp}"
-  print -rn -- "${meta}" > "${meta_tmp}"
-
-  AI_REPLY_REPLY_FILE="${reply_tmp}" \
-  AI_REPLY_META_FILE="${meta_tmp}" \
-  AI_REPLY_OUT_FILE="${out_tmp}" \
-  osascript <<'APPLESCRIPT' 2>/dev/null
-set replyFile to system attribute "AI_REPLY_REPLY_FILE"
-set metaFile to system attribute "AI_REPLY_META_FILE"
-set outFile to system attribute "AI_REPLY_OUT_FILE"
-
-set replyText to read POSIX file replyFile as «class utf8»
-set metaText to read POSIX file metaFile as «class utf8»
-
-set msg to metaText & "
-
-生成的回复如下（可复制/可编辑）：
-
-点 Follow Up 可以继续提要求并让 AI 重新改写。"
-set dlg to display dialog msg default answer replyText buttons {"Follow Up", "Copy", "OK"} default button "OK" with title "AI Reply"
-set btn to button returned of dlg
-set txt to text returned of dlg
-if btn is "Copy" then
-  set the clipboard to txt
-end if
-
-set payload to btn & linefeed & txt
-set fh to open for access POSIX file outFile with write permission
-set eof of fh to 0
-write payload to fh as «class utf8»
-close access fh
-APPLESCRIPT
-  local rc=$?
-  if (( rc == 0 )) && [[ -s "${out_tmp}" ]]; then
-    cat "${out_tmp}"
-  fi
-  rm -f "${reply_tmp}" "${meta_tmp}" "${out_tmp}" 2>/dev/null
-  return ${rc}
-}
-
-prompt_follow_up() {
-  if [[ "${AI_REPLY_HEADLESS:-}" == "1" ]]; then
-    return 1
-  fi
-  local out_tmp
-  out_tmp="$(mktemp -t aireply.followup.XXXXXX)"
-
-  AI_REPLY_OUT_FILE="${out_tmp}" \
-  osascript <<'APPLESCRIPT' 2>/dev/null
-on getenv(varName)
-  return do shell script "/bin/sh -c 'printf %s \"$" & varName & "\"'"
-end getenv
-
-set outFile to my getenv("AI_REPLY_OUT_FILE")
-set dlg to display dialog "输入追加要求（例如：更短、更礼貌、补充时间点…）：" default answer "" buttons {"取消","发送"} default button "发送" with title "AI Reply"
-if button returned of dlg is "取消" then
-  error number -128
-end if
-set txt to text returned of dlg
-
-set fh to open for access POSIX file outFile with write permission
-set eof of fh to 0
-write txt to fh as «class utf8»
-close access fh
-APPLESCRIPT
-  local rc=$?
-  if (( rc != 0 )); then
-    rm -f "${out_tmp}" 2>/dev/null
-    return 1
-  fi
-  local res="$(cat "${out_tmp}")"
-  rm -f "${out_tmp}" 2>/dev/null
-  print -r -- "${res}"
-}
-
 # ------------------------------ API call --------------------------------
 
 # call_api <api_key> <endpoint> <draft> <followup>
@@ -370,9 +272,19 @@ generate_reply() {
   fi
 
   local last_error_msg=""
+  local attempt=0
   for pair in "${tried_pairs[@]}"; do
+    ((attempt++))
     local current_api_key="${pair%%|*}"
     local current_endpoint="${pair#*|}"
+
+    # Filter out unhealthy keys from previous runs.
+    if [[ -f "${debug_dir}/key_health.json" ]]; then
+      if [[ "$(python3 "${lib_dir}/retry.py" is-healthy "${current_api_key:0:8}***" 2>/dev/null)" != "true" ]]; then
+        last_error_msg="Key ${current_api_key:0:8}... is in cooldown (skipping)"
+        continue
+      fi
+    fi
 
     local result
     result="$(call_api "${current_api_key}" "${current_endpoint}" "${draft}" "${followup}")"
@@ -390,7 +302,24 @@ generate_reply() {
         error_exit "${result}"
         ;;
       *)
-        last_error_msg="${result}"
+        # On rate-limit, mark key unhealthy and honour Retry-After.
+        if print -r -- "${result}" | grep -qi '429\|rate.limit\|too many'; then
+          local retry_sec
+          retry_sec="$(python3 "${lib_dir}/retry.py" parse-retry-after "${debug_dir}/last_headers.txt" 2>/dev/null)"
+          [[ -z "${retry_sec}" || "${retry_sec}" == "0" ]] && retry_sec=5
+          python3 "${lib_dir}/retry.py" mark-unhealthy \
+            "${current_api_key:0:8}***" "rate_limited" "${retry_sec}" 2>/dev/null || true
+          last_error_msg="${result} (key cooled for ${retry_sec}s)"
+        else
+          last_error_msg="${result}"
+        fi
+        # Exponential backoff: 0.5s, 1s, 2s, cap at 4s.
+        if (( attempt > 1 )); then
+          python3 -c "
+import time; t = min(0.5 * 2**(${attempt}-2), 4.0)
+time.sleep(t)
+" 2>/dev/null || true
+        fi
         continue
         ;;
     esac

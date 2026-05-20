@@ -7,6 +7,10 @@
   "captureHtml": true,
   "options": [
     {
+      "type": "heading",
+      "label": "🔐 Account"
+    },
+    {
       "identifier": "api_key",
       "type": "secret",
       "label": "API Key",
@@ -31,13 +35,17 @@
       "type": "string",
       "label": "API Key Pool File",
       "defaultValue": "~/.config/popclip-aireply/pool.json",
-      "description": "Optional. Path to a JSON file: [{\"api_key\":\"...\",\"endpoint\":\"...\"}, ...]. When non-empty, the pool is used and 429/5xx errors retry on a different key."
+      "description": "Optional. JSON file of [{\"api_key\":\"...\",\"endpoint\":\"...\"}, ...]. When non-empty, 429/5xx errors retry on a different key."
     },
     {
       "identifier": "api_key_pool",
       "type": "string",
       "label": "API Key Pool (inline)",
       "description": "Optional fallback. Same JSON shape as the pool file, pasted inline. The pool file takes priority when set."
+    },
+    {
+      "type": "heading",
+      "label": "🤖 Model"
     },
     {
       "identifier": "model",
@@ -136,6 +144,10 @@
       "description": "0.0 – 2.0. Leave empty for default (0.4)."
     },
     {
+      "type": "heading",
+      "label": "✍️ Reply Behavior"
+    },
+    {
       "identifier": "auto_language",
       "type": "boolean",
       "label": "🌐 Reply in Source Language",
@@ -171,11 +183,8 @@
       "description": "Display the detected language in the result dialog."
     },
     {
-      "identifier": "save_history",
-      "type": "boolean",
-      "label": "🗂️ Save History",
-      "defaultValue": false,
-      "description": "Append each successful generation to ~/Library/Logs/AIReplyPopClip/history.jsonl"
+      "type": "heading",
+      "label": "📬 Mail.app"
     },
     {
       "identifier": "mail_thread_context",
@@ -190,6 +199,17 @@
       "label": "📬 Max Thread Messages",
       "defaultValue": "5",
       "description": "Maximum number of thread messages to include as context (1–20). Older messages beyond this limit are ignored."
+    },
+    {
+      "type": "heading",
+      "label": "🔒 Privacy & Debug"
+    },
+    {
+      "identifier": "save_history",
+      "type": "boolean",
+      "label": "🗂️ Save History",
+      "defaultValue": false,
+      "description": "Append each successful generation to ~/Library/Logs/AIReplyPopClip/history.jsonl. History may contain email content and is stored with 600 permissions."
     }
   ],
   "actions": [
@@ -200,6 +220,42 @@
       "interpreter": "/bin/zsh",
       "stdin": "markdown",
       "icon": "square filled symbol:arrowshape.turn.up.left"
+    },
+    {
+      "title": "AI Reply — Professional",
+      "after": "ignore",
+      "shellScriptFile": "reply.zsh",
+      "interpreter": "/bin/zsh",
+      "stdin": "markdown",
+      "icon": "square filled symbol:arrowshape.turn.up.left",
+      "options": {
+        "prompt_style_selection": false,
+        "reply_style": "professional"
+      }
+    },
+    {
+      "title": "AI Reply — Friendly",
+      "after": "ignore",
+      "shellScriptFile": "reply.zsh",
+      "interpreter": "/bin/zsh",
+      "stdin": "markdown",
+      "icon": "square filled symbol:arrowshape.turn.up.left",
+      "options": {
+        "prompt_style_selection": false,
+        "reply_style": "friendly"
+      }
+    },
+    {
+      "title": "AI Reply — Concise",
+      "after": "ignore",
+      "shellScriptFile": "reply.zsh",
+      "interpreter": "/bin/zsh",
+      "stdin": "markdown",
+      "icon": "square filled symbol:arrowshape.turn.up.left",
+      "options": {
+        "prompt_style_selection": false,
+        "reply_style": "concise"
+      }
     },
     {
       "title": "Pick Model",

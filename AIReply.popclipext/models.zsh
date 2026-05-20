@@ -109,34 +109,94 @@ fi
 
 endpoint="${endpoint%/}"
 
-body_file="${debug_dir}/last_models_body.txt"
-rm -f "${body_file}" 2>/dev/null || true
+# Model cache — expires after 24 hours.
+model_cache_file="${config_dir}/model_cache.json"
+cache_ttl_seconds=86400
 
-http_status="$(curl -sS \
-  --compressed \
-  --connect-timeout 10 \
-  --max-time 30 \
-  -o "${body_file}" \
-  -w "%{http_code}" \
-  -H "Authorization: Bearer ${api_key}" \
-  -H "Accept: application/json" \
-  "${endpoint}/models" \
-  2>"${debug_dir}/last_models_curl_stderr.txt")"
-curl_exit=$?
+do_fetch_models() {
+  local body_file="${debug_dir}/last_models_body.txt"
+  rm -f "${body_file}" 2>/dev/null || true
 
-if (( curl_exit != 0 )); then
-  show_error "Network error fetching models (curl exit ${curl_exit}). See ${debug_dir}/last_models_curl_stderr.txt"
+  local http_status
+  http_status="$(curl -sS \
+    --compressed \
+    --connect-timeout 10 \
+    --max-time 30 \
+    -o "${body_file}" \
+    -w "%{http_code}" \
+    -H "Authorization: Bearer ${api_key}" \
+    -H "Accept: application/json" \
+    "${endpoint}/models" \
+    2>"${debug_dir}/last_models_curl_stderr.txt")"
+  local curl_exit=$?
+
+  if (( curl_exit != 0 )) || [[ "${http_status}" != "200" ]]; then
+    return 1
+  fi
+
+  local models_out
+  models_out="$(python3 "${lib_dir}/fetch_models.py" "${body_file}" 2>"${debug_dir}/last_models_err.txt")"
+  if [[ $? -ne 0 || -z "${models_out//[[:space:]]/}" ]]; then
+    return 1
+  fi
+
+  # Persist to cache — store models list + timestamp.
+  python3 -c "
+import json, time
+models = open('${body_file}').read()
+cache = {'models': json.loads(models), 'ts': int(time.time())}
+open('${model_cache_file}', 'w').write(json.dumps(cache))
+" 2>/dev/null || true
+
+  print -r -- "${models_out}"
+  return 0
+}
+
+cached_models=""
+from_cache=false
+
+# Check if cache is still fresh.
+if [[ -f "${model_cache_file}" ]]; then
+  cache_data="$(python3 -c "
+import json, time, sys
+try:
+  data = json.loads(open('${model_cache_file}').read())
+  age = int(time.time()) - data.get('ts', 0)
+  if age < ${cache_ttl_seconds}:
+    models = data.get('models', {})
+    ids = sorted([m.get('id','') for m in models.get('data', [])])
+    print('\n'.join(ids))
+except Exception:
+  sys.exit(1)
+" 2>/dev/null)"
+  if [[ -n "${cached_models}" ]]; then
+    from_cache=true
+  fi
 fi
 
-if [[ "${http_status}" != "200" ]]; then
-  body_snippet=""
-  [[ -f "${body_file}" ]] && body_snippet="$(head -c 400 "${body_file}")"
-  show_error "HTTP ${http_status} from ${endpoint}/models${body_snippet:+\n\n${body_snippet}}"
-fi
-
-models_out="$(python3 "${lib_dir}/fetch_models.py" "${body_file}" 2>"${debug_dir}/last_models_err.txt")"
-if [[ $? -ne 0 || -z "${models_out//[[:space:]]/}" ]]; then
-  show_error "Failed to parse models. $(cat "${debug_dir}/last_models_err.txt" 2>/dev/null)"
+if [[ "${from_cache}" == "true" ]]; then
+  models_out="${cached_models}"
+else
+  # Fetch from endpoint; fall back to stale cache on failure.
+  models_out="$(do_fetch_models)"
+  if [[ $? -ne 0 || -z "${models_out//[[:space:]]/}" ]]; then
+    # Try stale cache as last resort.
+    if [[ -f "${model_cache_file}" ]]; then
+      models_out="$(python3 -c "
+import json, sys
+try:
+  data = json.loads(open('${model_cache_file}').read())
+  models = data.get('models', {})
+  ids = sorted([m.get('id','') for m in models.get('data', [])])
+  print('\n'.join(ids))
+except Exception:
+  sys.exit(1)
+" 2>/dev/null)"
+    fi
+    if [[ -z "${models_out//[[:space:]]/}" ]]; then
+      show_error "Failed to fetch and no cached models available."
+    fi
+  fi
 fi
 
 if [[ "${AI_REPLY_HEADLESS:-}" == "1" ]]; then
@@ -152,9 +212,15 @@ if [[ -s "${selected_model_file}" ]]; then
 fi
 [[ -z "${current_model}" ]] && current_model="${settings_model}"
 
-choice="$(MODELS="${models_out}" CURRENT="${current_model}" osascript <<'APPLESCRIPT' 2>/dev/null
+model_prompt="选择一个模型作为默认。下次回复会立即使用此选择："
+if [[ "${from_cache}" == "true" ]]; then
+	model_prompt="${model_prompt} (来自缓存，24h 内刷新)"
+fi
+
+choice="$(MODELS="${models_out}" CURRENT="${current_model}" PROMPT="${model_prompt}" osascript <<'APPLESCRIPT' 2>/dev/null
 set raw to system attribute "MODELS"
 set cur to system attribute "CURRENT"
+set prm to system attribute "PROMPT"
 
 set AppleScript's text item delimiters to linefeed
 set modelList to text items of raw
@@ -165,7 +231,7 @@ if cur is not "" and cur is in modelList then
   set defaultItems to {cur}
 end if
 
-set picked to choose from list modelList with title "AI Reply — Pick Model" with prompt "选择一个模型作为默认。下次回复会立即使用此选择：" default items defaultItems OK button name "使用" cancel button name "取消"
+set picked to choose from list modelList with title "AI Reply — Pick Model" with prompt prm default items defaultItems OK button name "使用" cancel button name "取消"
 if picked is false then
   return ""
 end if

@@ -8,6 +8,10 @@ _archive/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+
+# Build output
+*.popclipextz
 
 # Editors
 .vscode/

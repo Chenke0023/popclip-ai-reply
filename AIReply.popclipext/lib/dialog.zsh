@@ -280,9 +280,19 @@ generate_reply() {
   fi
 
   local last_error_msg=""
+  local attempt=0
   for pair in "${tried_pairs[@]}"; do
+    ((attempt++))
     local current_api_key="${pair%%|*}"
     local current_endpoint="${pair#*|}"
+
+    # Skip keys in cooldown.
+    if [[ -f "${debug_dir}/key_health.json" ]]; then
+      if [[ "$(python3 "${lib_dir}/retry.py" is-healthy "${current_api_key:0:8}***" 2>/dev/null)" != "true" ]]; then
+        last_error_msg="Key ${current_api_key:0:8}... is in cooldown (skipping)"
+        continue
+      fi
+    fi
 
     local result
     result="$(call_api "${current_api_key}" "${current_endpoint}" "${draft}" "${followup}")"
@@ -298,7 +308,24 @@ generate_reply() {
         return 2
         ;;
       *)
-        last_error_msg="${result}"
+        # Rate-limit: mark unhealthy and honour Retry-After.
+        if print -r -- "${result}" | grep -qi '429\|rate.limit\|too many'; then
+          local retry_sec
+          retry_sec="$(python3 "${lib_dir}/retry.py" parse-retry-after "${debug_dir}/last_headers.txt" 2>/dev/null)"
+          [[ -z "${retry_sec}" || "${retry_sec}" == "0" ]] && retry_sec=5
+          python3 "${lib_dir}/retry.py" mark-unhealthy \
+            "${current_api_key:0:8}***" "rate_limited" "${retry_sec}" 2>/dev/null || true
+          last_error_msg="${result} (key cooled for ${retry_sec}s)"
+        else
+          last_error_msg="${result}"
+        fi
+        # Exponential backoff on retry.
+        if (( attempt > 1 )); then
+          python3 -c "
+import time; t = min(0.5 * 2**(${attempt}-2), 4.0)
+time.sleep(t)
+" 2>/dev/null || true
+        fi
         continue
         ;;
     esac
