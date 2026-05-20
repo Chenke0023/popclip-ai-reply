@@ -4,32 +4,38 @@
 Output (stdout):
   JSON object:
     {
-      "source": "mail_app",          // always
+      "source": "mail_app",
       "subject": "Re: Q2 budget",
-      "latest": {                    // the message open in the viewer
+      "latest": {
         "from": "alice@example.com",
         "date": "2026-05-19 10:00",
         "body": "..."
       },
-      "thread": [                    // full thread, newest-first, capped at max_messages
+      "thread": [
         { "from": "...", "date": "...", "body": "..." },
         ...
       ]
     }
 
-Exit 0 on success, non-zero on any failure (caller falls back to selected text).
+Exit 0 on success, non-zero on failure (caller falls back to selected text).
 
 Environment:
   AI_REPLY_MAIL_MAX_MESSAGES  - max thread messages to fetch (default: 5)
 """
+import base64
 import json
 import os
 import subprocess
 import sys
+import uuid
 
 MAX_MESSAGES = int(os.environ.get("AI_REPLY_MAIL_MAX_MESSAGES", "5"))
 
-APPLESCRIPT = """
+# A random separator per invocation — eliminates collision risk with
+# email body content (unlike fixed sentinel strings such as |||AIREPLY|||).
+SEP = uuid.uuid4().hex
+
+APPLESCRIPT_TEMPLATE = """\
 on joinList(lst, sep)
     set out to ""
     repeat with i from 1 to count of lst
@@ -40,7 +46,6 @@ on joinList(lst, sep)
 end joinList
 
 tell application "Mail"
-    -- get the frontmost viewer
     if (count of message viewers) is 0 then
         error "No Mail viewer open"
     end if
@@ -55,37 +60,35 @@ tell application "Mail"
     set latestDate to (date string of (date received of theMsg))
     set latestBody to content of theMsg
 
-    -- collect thread via conversation id
     set convId to conversation id of theMsg
     set allMsgs to (messages of theViewer whose conversation id is convId)
+    set msgCount to count of allMsgs
 
-    -- build output lines: use a sentinel separator unlikely to appear in emails
-    set SEP to "|||AIREPLY|||"
+    set SEP to "__SEP_PLACEHOLDER__"
     set NL to ASCII character 10
 
     set lines to {}
     set end of lines to "SUBJECT:" & theSubject
     set end of lines to "LATEST_FROM:" & latestFrom
     set end of lines to "LATEST_DATE:" & latestDate
-    set end of lines to "LATEST_BODY_START"
-    set end of lines to latestBody
-    set end of lines to "LATEST_BODY_END"
-
-    set msgCount to count of allMsgs
+    set end of lines to "LATEST_BODY_B64:" & (do shell script "printf %s " & quoted form of latestBody & " | base64 -b 0")
     set end of lines to "THREAD_COUNT:" & msgCount
 
-    repeat with i from 1 to msgCount
+    -- Only extract bodies for the most recent MAX_MESSAGES messages.
+    -- Pulling content for hundreds of thread messages cripples Mail.app.
+    set startIndex to 1
+    if msgCount > __MAX_PLACEHOLDER__ then set startIndex to msgCount - __MAX_PLACEHOLDER__ + 1
+
+    repeat with i from startIndex to msgCount
         set m to item i of allMsgs
-        set end of lines to "MSG_FROM:" & (sender of m)
-        set end of lines to "MSG_DATE:" & (date string of (date received of m))
-        set end of lines to "MSG_BODY_START"
-        set end of lines to (content of m)
-        set end of lines to "MSG_BODY_END"
+        set end of lines to SEP & (sender of m)
+        set end of lines to SEP & (date string of (date received of m))
+        set end of lines to SEP & (do shell script "printf %s " & quoted form of (content of m) & " | base64 -b 0")
     end repeat
 
     return my joinList(lines, NL)
 end tell
-"""
+""".replace("__SEP_PLACEHOLDER__", SEP).replace("__MAX_PLACEHOLDER__", str(MAX_MESSAGES))
 
 
 def run_applescript(script: str) -> str:
@@ -98,6 +101,14 @@ def run_applescript(script: str) -> str:
     return result.stdout.strip()
 
 
+def b64decode(s: str) -> str:
+    """Decode a base64 string, tolerant of whitespace."""
+    try:
+        return base64.b64decode(s.strip()).decode("utf-8", errors="replace")
+    except Exception:
+        return s  # fallback: return raw text
+
+
 def parse_output(raw: str) -> dict:
     lines = raw.splitlines()
     idx = 0
@@ -108,31 +119,28 @@ def parse_output(raw: str) -> dict:
         idx += 1
         return line
 
-    def read_block_until(sentinel):
-        parts = []
-        while idx < len(lines):
-            line = next_line()
-            if line == sentinel:
-                break
-            parts.append(line)
-        return "\n".join(parts)
-
     subject = next_line().removeprefix("SUBJECT:")
     latest_from = next_line().removeprefix("LATEST_FROM:")
     latest_date = next_line().removeprefix("LATEST_DATE:")
-    next_line()  # LATEST_BODY_START
-    latest_body = read_block_until("LATEST_BODY_END")
+    latest_body = b64decode(next_line().removeprefix("LATEST_BODY_B64:"))
 
     thread_count_line = next_line()
     thread_count = int(thread_count_line.removeprefix("THREAD_COUNT:"))
 
     thread = []
-    for _ in range(min(thread_count, MAX_MESSAGES)):
-        msg_from = next_line().removeprefix("MSG_FROM:")
-        msg_date = next_line().removeprefix("MSG_DATE:")
-        next_line()  # MSG_BODY_START
-        msg_body = read_block_until("MSG_BODY_END")
+    for _ in range(thread_count):
+        if idx >= len(lines):
+            break
+        line = next_line()
+        if not line.startswith(SEP):
+            continue
+        msg_from = line[len(SEP):]
+        msg_date = next_line()[len(SEP):]
+        msg_body = b64decode(next_line()[len(SEP):])
         thread.append({"from": msg_from, "date": msg_date, "body": msg_body})
+
+    # Trim to max in case AppleScript sent more (shouldn't happen but safe).
+    thread = thread[-MAX_MESSAGES:] if len(thread) > MAX_MESSAGES else thread
 
     return {
         "source": "mail_app",
@@ -144,7 +152,7 @@ def parse_output(raw: str) -> dict:
 
 def main() -> int:
     try:
-        raw = run_applescript(APPLESCRIPT)
+        raw = run_applescript(APPLESCRIPT_TEMPLATE)
         data = parse_output(raw)
         print(json.dumps(data, ensure_ascii=False))
         return 0

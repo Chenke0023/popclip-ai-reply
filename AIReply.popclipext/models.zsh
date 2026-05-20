@@ -109,8 +109,9 @@ fi
 
 endpoint="${endpoint%/}"
 
-# Model cache — expires after 24 hours.
-model_cache_file="${config_dir}/model_cache.json"
+# Model cache — per-endpoint, expires after 24 hours.
+endpoint_hash="$(printf '%s' "${endpoint}" | md5)"
+model_cache_file="${config_dir}/model_cache_${endpoint_hash}.json"
 cache_ttl_seconds=86400
 
 do_fetch_models() {
@@ -152,7 +153,6 @@ open('${model_cache_file}', 'w').write(json.dumps(cache))
   return 0
 }
 
-cached_models=""
 from_cache=false
 
 # Check if cache is still fresh.
@@ -169,14 +169,13 @@ try:
 except Exception:
   sys.exit(1)
 " 2>/dev/null)"
-  if [[ -n "${cached_models}" ]]; then
+  if [[ -n "${cache_data}" ]]; then
+    models_out="${cache_data}"
     from_cache=true
   fi
 fi
 
-if [[ "${from_cache}" == "true" ]]; then
-  models_out="${cached_models}"
-else
+if [[ "${from_cache}" != "true" ]]; then
   # Fetch from endpoint; fall back to stale cache on failure.
   models_out="$(do_fetch_models)"
   if [[ $? -ne 0 || -z "${models_out//[[:space:]]/}" ]]; then

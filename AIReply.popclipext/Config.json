@@ -263,6 +263,13 @@
       "shellScriptFile": "models.zsh",
       "interpreter": "/bin/zsh",
       "icon": "square filled symbol:list.bullet"
+    },
+    {
+      "title": "Manage Key Pool",
+      "after": "ignore",
+      "shellScriptFile": "pool_setup.zsh",
+      "interpreter": "/bin/zsh",
+      "icon": "square filled symbol:rectangle.stack"
     }
   ]
 }
