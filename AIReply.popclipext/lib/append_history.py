@@ -28,6 +28,7 @@ def main() -> int:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        os.chmod(path, 0o600)
     except OSError as e:
         print(f"history write failed: {e}", file=sys.stderr)
         return 1

@@ -55,12 +55,14 @@ show_error() {
 
 current_info=""
 if [[ -f "${pool_file}" ]]; then
-  key_count="$(python3 -c "
+  key_count="$(python3 - "${pool_file}" <<'PY' 2>/dev/null
 import json, sys
-with open('${pool_file}') as f:
-    pool = json.load(f)
+
+with open(sys.argv[1], encoding='utf-8') as file:
+    pool = json.load(file)
 print(len([p for p in pool if p.get('api_key') and p.get('endpoint')]))
-" 2>/dev/null)"
+PY
+)"
   if [[ -n "${key_count}" && "${key_count}" != "0" ]]; then
     current_info="当前已配置 ${key_count} 个 key。
 "
@@ -125,36 +127,16 @@ fi
 
 # ---------- parse input into pool JSON ----------
 
-python3 -c "
-import json, sys
-
-lines = '''${input_text}'''.strip().splitlines()
-default_endpoint = '${endpoint}'
-pool = []
-
-for line in lines:
-    line = line.strip()
-    if not line or line.startswith('#'):
-        continue
-    if '|' in line:
-        key, sep, ep = line.partition('|')
-        pool.append({'api_key': key.strip(), 'endpoint': ep.strip()})
-    else:
-        pool.append({'api_key': line, 'endpoint': default_endpoint})
-
-with open('${pool_file}', 'w') as f:
-    json.dump(pool, f, indent=2, ensure_ascii=False)
-print(len(pool))
-" 2>/dev/null || show_error "Failed to parse input. Check the format and try again."
-
-chmod 600 "${pool_file}" 2>/dev/null || true
-
-key_count="$(python3 -c "
-import json
-with open('${pool_file}') as f:
-    pool = json.load(f)
-print(len(pool))
-" 2>/dev/null)"
+input_tmp="$(mktemp -t aireply.poolinput.XXXXXX)"
+print -rn -- "${input_text}" > "${input_tmp}"
+key_count="$(python3 "${lib_dir}/write_pool.py" \
+  --input-file "${input_tmp}" \
+  --default-endpoint "${endpoint}" \
+  --output "${pool_file}" 2>/dev/null)" || {
+  rm -f "${input_tmp}" 2>/dev/null
+  show_error "Failed to parse input. Check the format and try again."
+}
+rm -f "${input_tmp}" 2>/dev/null
 
 ok_tmp="$(mktemp -t aireply.poolok.XXXXXX)"
 {

@@ -585,15 +585,30 @@ if [[ "${AI_REPLY_HEADLESS:-}" != "1" ]]; then
 
   python3 -c "
 import json, os
-keys = [
-  'current_reply', 'input_from_stdin', 'user_prompt', 'runtime_prompt',
-  'system_prompt', 'model', 'temperature_raw', 'auto_language',
-  'reply_style', 'auto_copy', 'show_language_badge', 'save_history',
-  'history_path', 'detected_language', 'api_key', 'endpoint',
-  'api_key_pool', 'api_key_pool_file_raw', 'lib_dir', 'debug_dir',
-  'mail_thread_json',
-]
-data = {k: os.environ.get(f'_AIR_SESS_{k.upper()}', '') for k in keys}
+
+data = {
+  'current_reply': os.environ.get('_AIR_SESS_CURRENT_REPLY', ''),
+  'input_from_stdin': os.environ.get('_AIR_SESS_INPUT', ''),
+  'user_prompt': os.environ.get('_AIR_SESS_USER_PROMPT', ''),
+  'runtime_prompt': os.environ.get('_AIR_SESS_RUNTIME_PROMPT', ''),
+  'system_prompt': os.environ.get('_AIR_SESS_SYSTEM_PROMPT', ''),
+  'model': os.environ.get('_AIR_SESS_MODEL', ''),
+  'temperature_raw': os.environ.get('_AIR_SESS_TEMPERATURE_RAW', ''),
+  'auto_language': os.environ.get('_AIR_SESS_AUTO_LANGUAGE', ''),
+  'reply_style': os.environ.get('_AIR_SESS_REPLY_STYLE', ''),
+  'auto_copy': os.environ.get('_AIR_SESS_AUTO_COPY', ''),
+  'show_language_badge': os.environ.get('_AIR_SESS_SHOW_LANGUAGE_BADGE', ''),
+  'save_history': os.environ.get('_AIR_SESS_SAVE_HISTORY', ''),
+  'history_path': os.environ.get('_AIR_SESS_HISTORY_PATH', ''),
+  'detected_language': os.environ.get('_AIR_SESS_DETECTED_LANGUAGE', ''),
+  'api_key': os.environ.get('_AIR_SESS_API_KEY', ''),
+  'endpoint': os.environ.get('_AIR_SESS_ENDPOINT', ''),
+  'api_key_pool': os.environ.get('_AIR_SESS_API_KEY_POOL', ''),
+  'api_key_pool_file_raw': os.environ.get('_AIR_SESS_API_KEY_POOL_FILE', ''),
+  'lib_dir': os.environ.get('_AIR_SESS_LIB_DIR', ''),
+  'debug_dir': os.environ.get('_AIR_SESS_DEBUG_DIR', ''),
+  'mail_thread_json': os.environ.get('_AIR_SESS_MAIL_THREAD_JSON', ''),
+}
 print(json.dumps(data))
 " > "${session_tmp}"
 
