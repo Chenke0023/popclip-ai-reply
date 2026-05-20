@@ -195,7 +195,7 @@
   "actions": [
     {
       "title": "AI Reply",
-      "after": "show-result",
+      "after": "ignore",
       "shellScriptFile": "reply.zsh",
       "interpreter": "/bin/zsh",
       "stdin": "markdown",

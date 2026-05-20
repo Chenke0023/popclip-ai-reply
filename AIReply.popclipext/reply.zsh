@@ -624,43 +624,39 @@ if [[ "${save_history}" == "true" ]]; then
 fi
 
 if [[ "${AI_REPLY_HEADLESS:-}" != "1" ]]; then
-  while true; do
-    dlg_out="$(show_reply_dialog "${current_reply}")" || break
+  # Write session state to a temp file and hand off to the background
+  # dialog handler so this script can exit immediately (spinner disappears).
+  local session_tmp
+  session_tmp="$(mktemp -t aireply.session.XXXXXX)"
+  {
+    print -r -- "current_reply=${current_reply}"
+    print -r -- "input_from_stdin=${input_from_stdin}"
+    print -r -- "user_prompt=${user_prompt}"
+    print -r -- "runtime_prompt=${runtime_prompt}"
+    print -r -- "system_prompt=${system_prompt}"
+    print -r -- "model=${model}"
+    print -r -- "temperature_raw=${temperature_raw}"
+    print -r -- "auto_language=${auto_language}"
+    print -r -- "reply_style=${reply_style}"
+    print -r -- "auto_copy=${auto_copy}"
+    print -r -- "show_language_badge=${show_language_badge}"
+    print -r -- "save_history=${save_history}"
+    print -r -- "history_path=${history_path}"
+    print -r -- "detected_language=${detected_language}"
+    print -r -- "api_key=${api_key}"
+    print -r -- "endpoint=${endpoint}"
+    print -r -- "api_key_pool=${api_key_pool}"
+    print -r -- "api_key_pool_file_raw=${api_key_pool_file_raw}"
+    print -r -- "lib_dir=${lib_dir}"
+    print -r -- "debug_dir=${debug_dir}"
+    print -r -- "mail_thread_json=${mail_thread_json}"
+  } > "${session_tmp}"
 
-    dlg_lines=("${(@f)dlg_out}")
-    dlg_btn="${dlg_lines[1]}"
-    dlg_text="${(j:\n:)dlg_lines[2,-1]}"
-    current_reply="${dlg_text}"
-
-    case "${dlg_btn}" in
-      OK)
-        break
-        ;;
-      Copy)
-        break
-        ;;
-      "Follow Up")
-        followup="$(prompt_follow_up)" || continue
-        [[ -z "${followup//[[:space:]]/}" ]] && continue
-
-        current_reply="$(generate_reply "${current_reply}" "${followup}")"
-        print -r -- "${current_reply}" > "${debug_dir}/last_reply.txt" 2>/dev/null || true
-        [[ "${auto_copy}" == "true" ]] && print -r -- "${current_reply}" | pbcopy 2>/dev/null || true
-
-        if [[ "${save_history}" == "true" ]]; then
-          AI_REPLY_HISTORY_PATH="${history_path}" \
-          AI_REPLY_INPUT_TEXT="${input_from_stdin}" \
-          AI_REPLY_RUNTIME_PROMPT="${runtime_prompt} | followup: ${followup}" \
-          AI_REPLY_MODEL="${model}" \
-          AI_REPLY_STYLE="${reply_style}" \
-          AI_REPLY_DETECTED_LANGUAGE="${detected_language}" \
-          AI_REPLY_FINAL_REPLY="${current_reply}" \
-          python3 "${lib_dir}/append_history.py" 2>/dev/null || true
-        fi
-        continue
-        ;;
-    esac
-  done
+  # Launch background handler and exit immediately.
+  # The dialog process is detached so it outlives this script.
+  nohup zsh "${lib_dir}/dialog.zsh" "${session_tmp}" &>/dev/null &
+  disown
+  exit 0
 fi
 
 print -r -- "${current_reply}"
