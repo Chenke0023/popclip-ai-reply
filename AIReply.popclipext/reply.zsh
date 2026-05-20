@@ -637,7 +637,7 @@ if [[ "${AI_REPLY_HEADLESS:-}" != "1" ]]; then
         break
         ;;
       Copy)
-        continue
+        break
         ;;
       "Follow Up")
         followup="$(prompt_follow_up)" || continue
