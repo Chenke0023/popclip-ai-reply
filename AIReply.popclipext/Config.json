@@ -68,7 +68,7 @@
       "identifier": "model",
       "type": "multiple",
       "label": "Model",
-      "defaultValue": "qwen/qwen3.5-397b-a17b",
+      "defaultValue": "gpt-4o-mini",
       "values": [
         "__custom__",
         "deepseek-ai/DeepSeek-V3.1-Terminus",

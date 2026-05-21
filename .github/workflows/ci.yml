@@ -28,4 +28,4 @@ jobs:
 
       - name: Run tests
         working-directory: AIReply.popclipext
-        run: python3 -m pytest tests/ -v
+        run: PYTHONPATH=. python3 -m unittest discover -s tests -v
