@@ -34,21 +34,24 @@ trap cleanup_session EXIT
 # --------------------------- load session --------------------------------
 # Parse the JSON session file once and emit shell variable assignments.
 local session_vars
-session_vars="$(python3 -c "
-import json, sys
-with open(sys.argv[1], encoding='utf-8') as f:
-    data = json.load(f)
-for key in sys.argv[2:]:
-    val = data.get(key, '')
-    # Escape single quotes for safe shell assignment
-    safe = str(val).replace(\"'\", \"'\"'\"'\")
-    print(f\"{key}='{safe}'\")
-" "${session_file}" \
+session_vars="$(python3 - "${session_file}" \
   current_reply input_from_stdin user_prompt runtime_prompt \
   system_prompt model temperature_raw auto_language reply_style \
   auto_copy show_language_badge save_history history_path \
   detected_language api_key endpoint api_key_pool \
-  api_key_pool_file_raw mail_thread_json)"
+  api_key_pool_file_raw mail_thread_json <<'PY'
+import json
+import shlex
+import sys
+
+with open(sys.argv[1], encoding='utf-8') as f:
+    data = json.load(f)
+
+for key in sys.argv[2:]:
+    val = data.get(key, '')
+    print(f"{key}={shlex.quote(str(val))}")
+PY
+)"
 
 eval "${session_vars}"
 
@@ -199,6 +202,9 @@ call_api() {
   local meta_file="${debug_dir}/last_meta.txt"
   local body_file="${debug_dir}/last_body.txt"
   local headers_file="${debug_dir}/last_headers.txt"
+  local curl_stderr_file="${debug_dir}/last_curl_stderr.txt"
+  local http_status_file="${debug_dir}/last_http_status.txt"
+  local curl_exit_file="${debug_dir}/last_curl_exit.txt"
 
   local payload_json
   payload_json="$(python3 "${lib_dir}/build_payload.py" 2>"${meta_file}")"
@@ -220,15 +226,23 @@ call_api() {
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     --data-binary "${payload_json}" \
-    2>/dev/null)"
+    2>"${curl_stderr_file}")"
   curl_exit=$?
+  print -r -- "${http_status}" > "${http_status_file}" 2>/dev/null || true
+  print -r -- "${curl_exit}" > "${curl_exit_file}" 2>/dev/null || true
 
   if (( curl_exit != 0 )); then
-    print -r -- "Network error: curl exit ${curl_exit}"
+    local curl_msg
+    curl_msg="$(cat "${curl_stderr_file}" 2>/dev/null)"
+    if [[ -n "${curl_msg}" ]]; then
+      print -r -- "Network error: curl exit ${curl_exit}. ${curl_msg}"
+    else
+      print -r -- "Network error: curl exit ${curl_exit} (HTTP ${http_status:-000})."
+    fi
     return 1
   fi
   if [[ ! -s "${body_file}" ]]; then
-    print -r -- "Empty response body"
+    print -r -- "Empty response body from server (HTTP ${http_status})."
     return 1
   fi
 
@@ -353,13 +367,18 @@ while true; do
 
       show_processing_notice
       log_dialog "follow-up API request starting; style=${reply_style}"
-      current_reply="$(generate_reply "${current_reply}" "${followup}")"
+      local previous_reply="${current_reply}"
+      local next_reply
+      next_reply="$(generate_reply "${previous_reply}" "${followup}")"
       local followup_rc=$?
-      log_dialog "follow-up API request finished; rc=${followup_rc}; reply_chars=${#current_reply}"
+      log_dialog "follow-up API request finished; rc=${followup_rc}; reply_chars=${#next_reply}"
       if (( followup_rc != 0 )); then
-        error_dialog "Follow-up request failed. Keeping previous reply."
+        current_reply="${previous_reply}"
+        log_dialog "follow-up failed; error=${next_reply}"
+        error_dialog $'Follow-up request failed. Keeping previous reply.\n\n'"${next_reply}"
         continue
       fi
+      current_reply="${next_reply}"
 
       if [[ "${auto_copy}" == "true" ]]; then
         print -r -- "${current_reply}" | pbcopy 2>/dev/null || true
