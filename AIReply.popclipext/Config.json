@@ -7,6 +7,7 @@
   "captureHtml": true,
   "options": [
     {
+      "identifier": "heading_account",
       "type": "heading",
       "label": "🔐 Account"
     },
@@ -44,6 +45,7 @@
       "description": "Optional fallback. Same JSON shape as the pool file, pasted inline. The pool file takes priority when set."
     },
     {
+      "identifier": "heading_model",
       "type": "heading",
       "label": "🤖 Model"
     },
@@ -144,6 +146,7 @@
       "description": "0.0 – 2.0. Leave empty for default (0.4)."
     },
     {
+      "identifier": "heading_reply_behavior",
       "type": "heading",
       "label": "✍️ Reply Behavior"
     },
@@ -183,6 +186,7 @@
       "description": "Display the detected language in the result dialog."
     },
     {
+      "identifier": "heading_mail_app",
       "type": "heading",
       "label": "📬 Mail.app"
     },
@@ -201,6 +205,7 @@
       "description": "Maximum number of thread messages to include as context (1–20). Older messages beyond this limit are ignored."
     },
     {
+      "identifier": "heading_privacy_debug",
       "type": "heading",
       "label": "🔒 Privacy & Debug"
     },

@@ -30,5 +30,6 @@ zip -qr "${tmp_zip}" . -x '*.DS_Store' -x '*__pycache__*'
 cd - >/dev/null
 
 mv "${tmp_zip}" "${out_file}"
-echo "✓ ${out_file} (${$(wc -c < "${out_file}")} bytes)"
+size="$(wc -c < "${out_file}" | tr -d ' ')"
+echo "✓ ${out_file} (${size} bytes)"
 echo "  Double-click to install in PopClip."
