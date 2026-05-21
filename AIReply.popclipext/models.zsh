@@ -27,10 +27,7 @@ config_dir="${HOME}/.config/popclip-aireply"
 selected_model_file="${config_dir}/selected_model"
 mkdir -p "${debug_dir}" "${config_dir}" 2>/dev/null || true
 
-expand_path() {
-  local p="$1"
-  print -r -- "${p/#\~\//${HOME}/}"
-}
+source "${lib_dir}/common.zsh"
 
 # AppleScript-safe dialog showing a UTF-8 string from a tmp file.
 dialog_from_file() {

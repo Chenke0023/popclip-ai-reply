@@ -31,37 +31,26 @@ cleanup_session() {
 }
 trap cleanup_session EXIT
 
-# --------------------------- JSON reader --------------------------------
-
-get_json_field() {
-  python3 -c "
-import json, sys
-data = json.loads(open(sys.argv[1], encoding='utf-8').read())
-print(data.get(sys.argv[2], ''))
-" "$1" "$2"
-}
-
 # --------------------------- load session --------------------------------
+# Parse the JSON session file once and emit shell variable assignments.
+local session_vars
+session_vars="$(python3 -c "
+import json, sys
+with open(sys.argv[1], encoding='utf-8') as f:
+    data = json.load(f)
+for key in sys.argv[2:]:
+    val = data.get(key, '')
+    # Escape single quotes for safe shell assignment
+    safe = str(val).replace(\"'\", \"'\"'\"'\")
+    print(f\"{key}='{safe}'\")
+" "${session_file}" \
+  current_reply input_from_stdin user_prompt runtime_prompt \
+  system_prompt model temperature_raw auto_language reply_style \
+  auto_copy show_language_badge save_history history_path \
+  detected_language api_key endpoint api_key_pool \
+  api_key_pool_file_raw mail_thread_json)"
 
-current_reply="$(     get_json_field "${session_file}" current_reply)"
-input_from_stdin="$(  get_json_field "${session_file}" input_from_stdin)"
-user_prompt="$(       get_json_field "${session_file}" user_prompt)"
-runtime_prompt="$(    get_json_field "${session_file}" runtime_prompt)"
-system_prompt="$(     get_json_field "${session_file}" system_prompt)"
-model="$(             get_json_field "${session_file}" model)"
-temperature_raw="$(   get_json_field "${session_file}" temperature_raw)"
-auto_language="$(     get_json_field "${session_file}" auto_language)"
-reply_style="$(       get_json_field "${session_file}" reply_style)"
-auto_copy="$(         get_json_field "${session_file}" auto_copy)"
-show_language_badge="$( get_json_field "${session_file}" show_language_badge)"
-save_history="$(      get_json_field "${session_file}" save_history)"
-history_path="$(      get_json_field "${session_file}" history_path)"
-detected_language="$( get_json_field "${session_file}" detected_language)"
-api_key="$(           get_json_field "${session_file}" api_key)"
-endpoint="$(          get_json_field "${session_file}" endpoint)"
-api_key_pool="$(      get_json_field "${session_file}" api_key_pool)"
-api_key_pool_file_raw="$( get_json_field "${session_file}" api_key_pool_file_raw)"
-mail_thread_json="$(  get_json_field "${session_file}" mail_thread_json)"
+eval "${session_vars}"
 
 log_dialog "session loaded; reply_chars=${#current_reply}; input_chars=${#input_from_stdin}; model=${model}; endpoint=${endpoint}"
 
@@ -69,26 +58,7 @@ log_dialog "session loaded; reply_chars=${#current_reply}; input_chars=${#input_
 
 # ------------------------------- utils ----------------------------------
 
-shuffle_array() {
-  local n=$#
-  local arr=("$@")
-  if (( n <= 1 )); then
-    print -l -- "${arr[@]}"
-    return 0
-  fi
-  for i in {$((n - 1))..1}; do
-    local j=$((RANDOM % i + 1))
-    local tmp="${arr[$i]}"
-    arr[$i]="${arr[$j]}"
-    arr[$j]="$tmp"
-  done
-  print -l -- "${arr[@]}"
-}
-
-expand_path() {
-  local p="$1"
-  print -r -- "${p/#\~\//${HOME}/}"
-}
+source "${lib_dir}/common.zsh"
 
 # --------------------------- dialogs ------------------------------------
 
@@ -228,6 +198,7 @@ call_api() {
 
   local meta_file="${debug_dir}/last_meta.txt"
   local body_file="${debug_dir}/last_body.txt"
+  local headers_file="${debug_dir}/last_headers.txt"
 
   local payload_json
   payload_json="$(python3 "${lib_dir}/build_payload.py" 2>"${meta_file}")"
@@ -241,6 +212,7 @@ call_api() {
     --compressed \
     --connect-timeout 10 \
     --max-time 90 \
+    -D "${headers_file}" \
     -o "${body_file}" \
     -w "%{http_code}" \
     -X POST "${test_endpoint}/chat/completions" \
@@ -361,11 +333,11 @@ time.sleep(t)
 # ------------------------------- main loop ------------------------------
 
 while true; do
-  dlg_out="$(show_reply_dialog "${current_reply}")" || break
+  local dlg_out="$(show_reply_dialog "${current_reply}")" || break
 
-  dlg_lines=("${(@f)dlg_out}")
-  dlg_btn="${dlg_lines[1]}"
-  dlg_text="${(j:\n:)dlg_lines[2,-1]}"
+  local dlg_lines=("${(@f)dlg_out}")
+  local dlg_btn="${dlg_lines[1]}"
+  local dlg_text="${(j:\n:)dlg_lines[2,-1]}"
   current_reply="${dlg_text}"
 
   case "${dlg_btn}" in
@@ -376,13 +348,13 @@ while true; do
       break
       ;;
     "Follow Up")
-      followup="$(prompt_follow_up)" || continue
+      local followup="$(prompt_follow_up)" || continue
       [[ -z "${followup//[[:space:]]/}" ]] && continue
 
       show_processing_notice
       log_dialog "follow-up API request starting; style=${reply_style}"
       current_reply="$(generate_reply "${current_reply}" "${followup}")"
-      followup_rc=$?
+      local followup_rc=$?
       log_dialog "follow-up API request finished; rc=${followup_rc}; reply_chars=${#current_reply}"
       if (( followup_rc != 0 )); then
         error_dialog "Follow-up request failed. Keeping previous reply."

@@ -12,10 +12,16 @@ import time
 from datetime import datetime, timezone
 
 
-HEALTH_FILE = os.path.expanduser(
-    os.environ.get("AI_REPLY_KEY_HEALTH_FILE",
-                   "~/Library/Logs/AIReplyPopClip/key_health.json")
-)
+def _health_file() -> str:
+    """Return the path to the key-health JSON file.
+
+    Evaluated at call time so that tests can mutate the env var
+    and see the new path immediately.
+    """
+    return os.path.expanduser(
+        os.environ.get("AI_REPLY_KEY_HEALTH_FILE",
+                       "~/Library/Logs/AIReplyPopClip/key_health.json")
+    )
 
 
 def parse_retry_after(headers_text: str) -> float:
@@ -48,14 +54,15 @@ def backoff_sleep(attempt: int, base: float = 0.5, max_wait: float = 4.0) -> flo
 
 def mark_key_unhealthy(api_key_masked: str, reason: str, cooldown_seconds: int = 60):
     """Persist a cooldown_until timestamp for a masked key."""
+    health_file = _health_file()
     try:
-        pathlib.Path(HEALTH_FILE).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(health_file).parent.mkdir(parents=True, exist_ok=True)
     except OSError:
         return
 
     health = {}
     try:
-        raw = pathlib.Path(HEALTH_FILE).read_text(encoding="utf-8")
+        raw = pathlib.Path(health_file).read_text(encoding="utf-8")
         health = json.loads(raw) if raw.strip() else {}
     except (OSError, json.JSONDecodeError):
         health = {}
@@ -68,17 +75,19 @@ def mark_key_unhealthy(api_key_masked: str, reason: str, cooldown_seconds: int =
     }
 
     try:
-        with open(HEALTH_FILE, "w") as f:
+        # Use os.open with O_CREAT and mode 0o600 to avoid TOCTOU race condition
+        fd = os.open(health_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
             json.dump(health, f, indent=2)
-        os.chmod(HEALTH_FILE, 0o600)
     except OSError:
         pass
 
 
 def is_key_healthy(api_key_masked: str) -> bool:
     """Check whether a key is past its cooldown."""
+    health_file = _health_file()
     try:
-        health = json.loads(pathlib.Path(HEALTH_FILE).read_text(encoding="utf-8"))
+        health = json.loads(pathlib.Path(health_file).read_text(encoding="utf-8"))
         entry = health.get(api_key_masked)
         if entry and isinstance(entry, dict):
             return int(time.time()) > entry.get("cooldown_until", 0)
@@ -102,7 +111,16 @@ def skip_unhealthy_keys(pairs: str) -> str:
 
 
 def _mask_key(api_key: str) -> str:
-    """Return masked key for safe logging."""
+    """Return masked key for safe logging and health-file lookup.
+
+    The mask format is stable regardless of key length so that callers
+    who already have a masked key (e.g. reply.zsh passing ${k:0:8}***)
+    can use it directly, while callers with the full key get the same
+    result after masking.
+    """
+    # If the caller already passed a masked key (contains ***), return as-is.
+    if "***" in api_key:
+        return api_key
     if len(api_key) <= 12:
         return api_key[:4] + "***"
     return api_key[:8] + "***" + api_key[-4:]

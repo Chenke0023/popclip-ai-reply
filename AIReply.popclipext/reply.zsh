@@ -39,28 +39,7 @@ rm -f "${debug_dir}/last_error.txt" 2>/dev/null || true
 
 # ------------------------------- utils ----------------------------------
 
-shuffle_array() {
-  # Fisher-Yates over positional arguments; prints each element on its own line.
-  local n=$#
-  local arr=("$@")
-  if (( n <= 1 )); then
-    print -l -- "${arr[@]}"
-    return 0
-  fi
-  for i in {$((n - 1))..1}; do
-    local j=$((RANDOM % i + 1))
-    local tmp="${arr[$i]}"
-    arr[$i]="${arr[$j]}"
-    arr[$j]="$tmp"
-  done
-  print -l -- "${arr[@]}"
-}
-
-expand_path() {
-  # ~/foo -> $HOME/foo (zsh tilde expansion does not happen inside quoted vars).
-  local p="$1"
-  print -r -- "${p/#\~\//${HOME}/}"
-}
+source "${lib_dir}/common.zsh"
 
 # --------------------------- dialogs (AppleScript) ---------------------
 
