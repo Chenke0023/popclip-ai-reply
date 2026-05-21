@@ -1,35 +1,42 @@
 #!/bin/zsh
 # Package the extension into a .popclipextz file ready for release.
-# Usage: zsh package.sh           → creates AIReply.popclipextz
-#        zsh package.sh v1.2.3    → creates AIReply-v1.2.3.popclipextz
+# Usage: zsh package.sh           → creates dist/AIReply-v0.1.0.popclipextz
+#        zsh package.sh 1.2.3     → creates dist/AIReply-v1.2.3.popclipextz
+#        zsh package.sh v1.2.3    → creates dist/AIReply-v1.2.3.popclipextz
 
 set -eu
 
 cd "${0:A:h}"
 ext_dir="AIReply.popclipext"
-version="${1:-}"
+version="${1:-0.1.0}"
+version="${version#v}"
+dist_dir="dist"
+out_file="${dist_dir}/AIReply-v${version}.popclipextz"
 
 if [[ ! -d "${ext_dir}" ]]; then
   echo "ERROR: ${ext_dir} not found." >&2
   exit 1
 fi
 
-out_name="AIReply"
-[[ -n "${version}" ]] && out_name="${out_name}-v${version}"
-out_file="${out_name}.popclipextz"
+mkdir -p "${dist_dir}"
+rm -f "${out_file}"
 
-# Clean __pycache__ first.
+# Clean transient files first.
 find "${ext_dir}" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+find "${ext_dir}" -type d -name '.pytest_cache' -exec rm -rf {} + 2>/dev/null || true
+find "${ext_dir}" -name '.DS_Store' -delete 2>/dev/null || true
 
-# Create zip and rename to .popclipextz.
-tmp_zip="/tmp/aireply_package_$$.zip"
-rm -f "${tmp_zip}" "${out_file}"
+# PopClip packages are zip archives renamed to .popclipextz. Keep the
+# .popclipext folder at the archive root for reliable double-click install.
+if command -v ditto >/dev/null 2>&1; then
+  ditto -c -k --sequesterRsrc --keepParent "${ext_dir}" "${out_file}"
+else
+  tmp_zip="/tmp/aireply_package_$$.zip"
+  rm -f "${tmp_zip}"
+  zip -qr "${tmp_zip}" "${ext_dir}" -x '*.DS_Store' -x '*__pycache__*' -x '*.pytest_cache*'
+  mv "${tmp_zip}" "${out_file}"
+fi
 
-cd "${ext_dir}"
-zip -qr "${tmp_zip}" . -x '*.DS_Store' -x '*__pycache__*'
-cd - >/dev/null
-
-mv "${tmp_zip}" "${out_file}"
 size="$(wc -c < "${out_file}" | tr -d ' ')"
 echo "✓ ${out_file} (${size} bytes)"
-echo "  Double-click to install in PopClip."
+echo "  Upload this file to the GitHub Release."

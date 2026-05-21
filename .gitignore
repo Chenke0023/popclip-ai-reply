@@ -1,4 +1,26 @@
-# Earlier / duplicate copies of the extension — kept locally but not versioned.
+# Local config / secrets
+.env
+*.env
+pool.json
+key_pool.json
+key_health.json
+selected_model
+api_key
+
+# Runtime/debug/history
+history.jsonl
+last_*.txt
+last_*.json
+last_*.log
+debug/
+logs/
+*.log
+
+# Build artifacts
+dist/
+*.popclipextz
+
+# Earlier / duplicate local copies
 _archive/
 
 # macOS
@@ -10,19 +32,8 @@ __pycache__/
 *$py.class
 .pytest_cache/
 
-# Build output
-*.popclipextz
-
 # Editors
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Logs / runtime artefacts (the extension writes these under
-# ~/Library/Logs/AIReplyPopClip, which is outside the repo, but guard the names
-# in case anyone redirects them inside the working tree).
-*.log
-last_*.txt
-last_*.json
-history.jsonl

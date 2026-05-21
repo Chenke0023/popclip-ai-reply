@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a problem with AI Reply for PopClip
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please remove private email content and API keys from logs.
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "e.g. macOS 15.5"
+    validations:
+      required: true
+  - type: input
+    id: popclip
+    attributes:
+      label: PopClip version
+      placeholder: "e.g. 2024.x"
+    validations:
+      required: true
+  - type: input
+    id: extension
+    attributes:
+      label: Extension version or commit
+      placeholder: "e.g. v0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: Endpoint provider and model
+      placeholder: "e.g. OpenAI / gpt-4.1-mini"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you select, click, and expect?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the error message if one appeared.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Paste relevant sanitized logs from ~/Library/Logs/AIReplyPopClip/.
+      render: text
