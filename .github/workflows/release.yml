@@ -1,0 +1,54 @@
+name: Release Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without leading v
+        required: true
+        default: 0.1.0
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-upload:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ github.event.inputs.version }}"
+            version="${version#v}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate
+        shell: bash
+        run: |
+          zsh -n AIReply.popclipext/reply.zsh AIReply.popclipext/lib/dialog.zsh AIReply.popclipext/pool_setup.zsh AIReply.popclipext/models.zsh package.sh
+          python3 -m py_compile AIReply.popclipext/lib/*.py
+          PYTHONPATH=AIReply.popclipext python3 -m unittest discover -s AIReply.popclipext/tests -v
+
+      - name: Package
+        shell: bash
+        run: zsh package.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="v${{ steps.version.outputs.version }}"
+          artifact="dist/AIReply-${tag}.popclipextz"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "AI Reply ${tag}" --notes "AI Reply release ${tag}"
+          gh release upload "$tag" "$artifact" --clobber
