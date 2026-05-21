@@ -390,32 +390,11 @@ APPLESCRIPT
 
 # ------------------------------- main -----------------------------------
 
-# Resolve model — three sources, in order:
-#   1. Settings field is a sentinel:
-#        __picker__ → use the Pick Model file (~/.config/popclip-aireply/selected_model)
-#        __custom__ → use the Custom Model string field
-#   2. Settings field is a concrete model id → use it verbatim.
-#   3. Empty / unknown → fall back to the picker file, then to build_payload.py's
-#      hardcoded default.
+# Resolve model from Settings. Use Custom Model only when the Model field is
+# explicitly set to __custom__; otherwise use the selected model id verbatim.
 case "${model}" in
-  __picker__|"")
-    selected_model_file="${HOME}/.config/popclip-aireply/selected_model"
-    if [[ -s "${selected_model_file}" ]]; then
-      picked="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
-      [[ -n "${picked}" ]] && model="${picked}" || model=""
-    else
-      model=""
-    fi
-    ;;
   __custom__)
     model="${POPCLIP_OPTION_MODEL_CUSTOM:-}"
-    if [[ -z "${model//[[:space:]]/}" ]]; then
-      # Custom selected but field is blank — fall through to picker, then default.
-      selected_model_file="${HOME}/.config/popclip-aireply/selected_model"
-      if [[ -s "${selected_model_file}" ]]; then
-        model="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
-      fi
-    fi
     ;;
 esac
 

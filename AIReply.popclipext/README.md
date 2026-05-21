@@ -9,7 +9,7 @@
 1. 从 [Releases](../../releases) 下载 `AIReply-vX.Y.Z.popclipextz`，双击安装。
 2. 在 PopClip 设置中至少配置：
    - `Endpoint`（默认 `https://ai.hybgzs.com/v1`）
-   - `Model`（下拉选择，默认读取 Pick Model 选择）
+   - `Model`（在 Settings 下拉选择，或用 Custom Model）
    - `API Key`，或把密钥写入 `~/.config/popclip-aireply/api_key`（推荐）
 
 > 自行构建：运行 `zsh package.sh` 生成 `.popclipextz`，双击安装或升级。
@@ -18,24 +18,19 @@
 
 1. 在邮件客户端、Web 邮箱或任意文本里**选中**正文。
 2. 点 PopClip 工具栏里的 **AI Reply**。
-3. 弹出的对话框可输入补充要求（可留空），点对应风格按钮生成：
-   - **正式 Professional** — 正式商务语气（默认）
-   - **友好 Friendly** — 友好亲切
-   - **简洁 Concise** — 言简意赅
+3. 弹出的对话框可输入补充要求（可留空），点 **发送** 生成；回复风格使用 Settings 里的 Default Style（默认 Concise）
 4. 结果对话框：
    - **OK** 关闭。
    - **Copy** 复制当前文本（可编辑后再复制）。
    - **Follow Up** 让 AI 基于当前草稿继续改写。可无限次。
 
-### 快捷动作（在 PopClip 设置中启用）
+### 工具栏动作
 
-为避免工具栏过载，扩展只保留主回复、模型选择和 Key Pool 管理动作。回复风格在设置面板统一配置。
+PopClip 工具栏只保留一个动作：
 
 | 动作 | 说明 |
 |------|------|
-| **AI Reply** | 使用设置里的默认风格生成回复，并支持 Follow Up 改写 |
-| **Pick Model** | 从服务端拉取最新模型列表并选择 |
-| **Manage Key Pool** | 创建/更新 API Key Pool |
+| **AI Reply** | 使用 Settings 里的模型、Key Pool 和默认风格生成回复，并支持 Follow Up 改写 |
 
 ## API Key 配置
 
@@ -77,12 +72,12 @@ chmod 600 ~/.config/popclip-aireply/pool.json
 
 ## Model 选择
 
-两种方式选模型：
+在 PopClip Settings 里选择模型：
 
-1. **设置面板下拉** — 预置常用模型列表，也可用 `🛠 Custom` 输入任意 model ID。
-2. **Pick Model 动作** — 从 PopClip 工具栏点 Pick Model，实时拉取 endpoint 返回的最新模型列表。选择会缓存 24 小时，并覆盖设置面板的选项。
+1. **Model 下拉** — 预置常用模型列表。
+2. **🛠 Custom** — 选择 Custom 后，在 `Custom Model` 输入任意 model ID。
 
-默认优先级：Pick Model 文件 > 设置面板 > 默认模型。
+模型选择完全由 Settings 控制，不再占用 PopClip 工具栏。
 
 ## 风格 / 语言
 
@@ -97,14 +92,12 @@ chmod 600 ~/.config/popclip-aireply/pool.json
 AIReply.popclipext/
 ├── Config.json             # PopClip 扩展配置（UI、选项）
 ├── reply.zsh               # 入口脚本（编排）
-├── models.zsh              # Pick Model 动作脚本
 ├── lib/
 │   ├── build_payload.py    # 构造 chat-completions 请求体
 │   ├── parse_response.py   # 解析模型响应 / 错误
 │   ├── load_pool.py        # 读取 / 校验 Key Pool
 │   ├── detect_language.py  # 邮件语言检测（仅用于徽章）
 │   ├── fetch_mail_thread.py # Mail.app 线程抓取
-│   ├── fetch_models.py     # 服务端模型列表解析
 │   ├── append_history.py   # 历史记录写入
 │   ├── dialog.zsh          # 后台对话框 + Follow Up 处理器
 │   └── retry.py            # 退避重试与 Retry-After 工具

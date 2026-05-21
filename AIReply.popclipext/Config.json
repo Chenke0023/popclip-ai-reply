@@ -36,13 +36,13 @@
       "type": "string",
       "label": "API Key Pool File",
       "defaultValue": "~/.config/popclip-aireply/pool.json",
-      "description": "Optional. JSON file of [{\"api_key\":\"...\",\"endpoint\":\"...\"}, ...]. When non-empty, 429/5xx errors retry on a different key."
+      "description": "Optional. JSON file of [{\"api_key\":\"...\",\"endpoint\":\"...\"}, ...]. Edit this path in Settings; when non-empty, 429/5xx errors retry on a different key."
     },
     {
       "identifier": "api_key_pool",
       "type": "string",
       "label": "API Key Pool (inline)",
-      "description": "Optional fallback. Same JSON shape as the pool file, pasted inline. The pool file takes priority when set."
+      "description": "Optional fallback managed in Settings. Same JSON shape as the pool file, pasted inline. The pool file takes priority when set."
     },
     {
       "identifier": "heading_model",
@@ -53,9 +53,8 @@
       "identifier": "model",
       "type": "multiple",
       "label": "Model",
-      "defaultValue": "__picker__",
+      "defaultValue": "qwen/qwen3.5-397b-a17b",
       "values": [
-        "__picker__",
         "__custom__",
         "deepseek-ai/DeepSeek-V3.1-Terminus",
         "deepseek-ai/DeepSeek-V3.2",
@@ -93,7 +92,6 @@
         "bytedance/seed-oss-36b-instruct"
       ],
       "valueLabels": [
-        "🎯 Use Pick Model selection",
         "🛠 Custom (see field below)",
         "DeepSeek V3.1 Terminus",
         "DeepSeek V3.2",
@@ -130,7 +128,7 @@
         "Z-AI GLM5",
         "Bytedance Seed-OSS 36B"
       ],
-      "description": "Pick from the list. '🎯 Use Pick Model' defers to the model chosen via the Pick Model action (~/.config/popclip-aireply/selected_model). '🛠 Custom' uses the Custom Model field below."
+      "description": "Pick from the list, or choose '🛠 Custom' and type any model id in Custom Model."
     },
     {
       "identifier": "model_custom",
@@ -227,20 +225,6 @@
       "interpreter": "/bin/zsh",
       "stdin": "markdown",
       "icon": "square filled symbol:arrowshape.turn.up.left"
-    },
-    {
-      "title": "Pick Model",
-      "after": "ignore",
-      "shellScriptFile": "models.zsh",
-      "interpreter": "/bin/zsh",
-      "icon": "square filled symbol:list.bullet"
-    },
-    {
-      "title": "Manage Key Pool",
-      "after": "ignore",
-      "shellScriptFile": "pool_setup.zsh",
-      "interpreter": "/bin/zsh",
-      "icon": "square filled symbol:rectangle.stack"
     }
   ]
 }
