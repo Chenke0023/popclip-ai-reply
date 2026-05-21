@@ -614,7 +614,13 @@ print(json.dumps(data))
 
   # Launch background handler and exit immediately.
   # The dialog process is detached so it outlives this script.
-  nohup zsh "${lib_dir}/dialog.zsh" "${session_tmp}" &>/dev/null &
+  dialog_log="${debug_dir}/last_dialog.log"
+  {
+    print -r -- "[$(date '+%Y-%m-%d %H:%M:%S')] launching dialog; session=${session_tmp}"
+  } > "${dialog_log}" 2>/dev/null || true
+  /usr/bin/osascript >/dev/null 2>>"${dialog_log}" <<APPLESCRIPT &
+do shell script "nohup /bin/zsh " & quoted form of "${lib_dir}/dialog.zsh" & " " & quoted form of "${session_tmp}" & " >> " & quoted form of "${dialog_log}" & " 2>&1 &"
+APPLESCRIPT
   disown
   exit 0
 fi

@@ -5,15 +5,28 @@
 set -u
 
 session_file="${1:-}"
+lib_dir="${0:A:h}"
+debug_dir="${HOME}/Library/Logs/AIReplyPopClip"
+mkdir -p "${debug_dir}" 2>/dev/null || true
+dialog_log="${debug_dir}/last_dialog.log"
+
+log_dialog() {
+  print -r -- "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${dialog_log}" 2>/dev/null || true
+}
+
+exec 2>>"${dialog_log}"
+
+log_dialog "dialog.zsh starting; session=${session_file}"
+
 if [[ -z "${session_file}" || ! -f "${session_file}" ]]; then
+  log_dialog "missing session file"
   exit 1
 fi
 
-lib_dir="${0:A:h}"
-debug_dir="${HOME}/Library/Logs/AIReplyPopClip"
-
 # Clean up session file on exit.
 cleanup_session() {
+  local rc=$?
+  log_dialog "dialog.zsh exiting rc=${rc}"
   rm -f "${session_file}" 2>/dev/null || true
 }
 trap cleanup_session EXIT
@@ -23,7 +36,7 @@ trap cleanup_session EXIT
 get_json_field() {
   python3 -c "
 import json, sys
-data = json.loads(open(sys.argv[1]).read())
+data = json.loads(open(sys.argv[1], encoding='utf-8').read())
 print(data.get(sys.argv[2], ''))
 " "$1" "$2"
 }
@@ -49,6 +62,8 @@ endpoint="$(          get_json_field "${session_file}" endpoint)"
 api_key_pool="$(      get_json_field "${session_file}" api_key_pool)"
 api_key_pool_file_raw="$( get_json_field "${session_file}" api_key_pool_file_raw)"
 mail_thread_json="$(  get_json_field "${session_file}" mail_thread_json)"
+
+log_dialog "session loaded; reply_chars=${#current_reply}; input_chars=${#input_from_stdin}; model=${model}; endpoint=${endpoint}"
 
 : "${current_reply}" "${lib_dir}" "${debug_dir}" "${history_path}"
 
@@ -78,6 +93,7 @@ expand_path() {
 # --------------------------- dialogs ------------------------------------
 
 show_reply_dialog() {
+  log_dialog "show_reply_dialog starting; reply_chars=${#1}"
   local style_label
   case "${reply_style}" in
     friendly) style_label="😊 Friendly" ;;
@@ -100,7 +116,7 @@ show_reply_dialog() {
   AI_REPLY_REPLY_FILE="${reply_tmp}" \
   AI_REPLY_META_FILE="${meta_tmp}" \
   AI_REPLY_OUT_FILE="${out_tmp}" \
-  osascript <<'APPLESCRIPT' 2>/dev/null
+  osascript <<'APPLESCRIPT'
 set replyFile to system attribute "AI_REPLY_REPLY_FILE"
 set metaFile to system attribute "AI_REPLY_META_FILE"
 set outFile to system attribute "AI_REPLY_OUT_FILE"
@@ -127,6 +143,7 @@ write payload to fh as «class utf8»
 close access fh
 APPLESCRIPT
   local rc=$?
+  log_dialog "show_reply_dialog osascript rc=${rc}; out_size=$(wc -c < "${out_tmp}" 2>/dev/null || print 0)"
   if (( rc == 0 )) && [[ -s "${out_tmp}" ]]; then
     cat "${out_tmp}"
   fi
@@ -135,11 +152,12 @@ APPLESCRIPT
 }
 
 prompt_follow_up() {
+  log_dialog "prompt_follow_up starting"
   local out_tmp
   out_tmp="$(mktemp -t aireply.followup.XXXXXX)"
 
   AI_REPLY_OUT_FILE="${out_tmp}" \
-  osascript <<'APPLESCRIPT' 2>/dev/null
+  osascript <<'APPLESCRIPT'
 on getenv(varName)
   return do shell script "/bin/sh -c 'printf %s \"$" & varName & "\"'"
 end getenv
@@ -175,7 +193,7 @@ error_dialog() {
   print -rn -- "${msg}" > "${msg_tmp}"
 
   AI_REPLY_MSG_FILE="${msg_tmp}" \
-  osascript <<'APPLESCRIPT' 2>/dev/null || true
+  osascript <<'APPLESCRIPT' || true
 set msgFile to system attribute "AI_REPLY_MSG_FILE"
 set userMsg to read POSIX file msgFile as «class utf8»
 display dialog userMsg buttons {"OK"} default button "OK" with title "AI Reply Error"
