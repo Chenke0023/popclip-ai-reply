@@ -2,6 +2,8 @@
 
 [English](#english) | [中文](#中文)
 
+![AI Reply demo](assets/demo.gif)
+
 ## English
 
 AI Reply is a macOS [PopClip](https://www.popclip.app/) extension that generates polished replies from selected text using OpenAI-compatible chat completion APIs.
