@@ -370,13 +370,26 @@ APPLESCRIPT
 
 # ------------------------------- main -----------------------------------
 
-# Resolve model from Settings. Use Custom Model only when the Model field is
-# explicitly set to __custom__; otherwise use the selected model id verbatim.
+# Resolve model from Settings. Priority:
+# 1. Pick Model file (~/.config/popclip-aireply/selected_model)
+# 2. Settings Model field (if __custom__, use Custom Model sub-field)
+config_dir="${HOME}/.config/popclip-aireply"
+selected_model_file="${config_dir}/selected_model"
+if [[ -s "${selected_model_file}" ]]; then
+  model="$(awk 'NF { print; exit }' "${selected_model_file}" 2>/dev/null)"
+fi
+
 case "${model}" in
-  __custom__)
+  __custom__|""|__picker__)
     model="${POPCLIP_OPTION_MODEL_CUSTOM:-}"
     ;;
 esac
+
+# When using a Custom endpoint, the static default gpt-4o-mini is almost
+# certainly wrong. Force the user to set a model explicitly.
+if [[ "${endpoint_preset}" == "custom" && -z "${model}" ]]; then
+  error_exit "Custom Endpoint requires an explicit model. Set one in PopClip Settings → Custom Model, or use Pick Model to choose from your endpoint."
+fi
 
 # Resolve API key — settings field > env var > file.
 if [[ -z "${api_key}" ]]; then

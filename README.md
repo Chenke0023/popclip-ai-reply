@@ -77,8 +77,10 @@ chmod 600 ~/.config/popclip-aireply/api_key
 #### Endpoint And Model
 
 - `Endpoint Preset`:
-  - **OpenAI** — uses `https://api.openai.com/v1` (default).
-  - **Custom** — enter your own OpenAI-compatible base URL in `Custom Endpoint`.
+  - **OpenAI** — uses `https://api.openai.com/v1` (default). The default model is `gpt-4o-mini`.
+  - **Custom** — enter your own OpenAI-compatible base URL in `Custom Endpoint`. You **must** also set a model explicitly:
+    - Select `🛠 Custom` in the `Model` field and fill in `Custom Model` with your provider's model id (e.g. `qwen/qwen3.5-397b-a17b`, `claude-3-5-sonnet-20241022`).
+    - Or use **Pick Model** (see below) to fetch and select from your endpoint's available models.
 - `Model` is selected from Settings.
 - Choose `Custom` and fill `Custom Model` to use any provider-specific model id.
 
@@ -138,7 +140,7 @@ Security-related implementation details:
 |---|---|
 | Missing API key | Set `API Key`, `API Key File`, or `AI_REPLY_API_KEY`. |
 | HTTP 401/403 | Key is invalid, expired, or lacks model access. |
-| HTTP 404 | Endpoint or model name is wrong for the provider. |
+| HTTP 404 | Endpoint or model name is wrong for the provider. Using a Custom Endpoint requires an explicit model. |
 | HTTP 429 | You are rate-limited; key cooldown/retry should engage. |
 | Empty/disappearing dialog | Check `~/Library/Logs/AIReplyPopClip/last_dialog.log`. |
 | Mail.app context missing | Grant Automation/Accessibility permissions and keep Mail.app frontmost. |
@@ -247,8 +249,10 @@ chmod 600 ~/.config/popclip-aireply/api_key
 #### Endpoint 和模型
 
 - `Endpoint Preset`：
-  - **OpenAI** — 使用 `https://api.openai.com/v1`（默认）。
-  - **Custom** — 在 `Custom Endpoint` 中填写你自己的 OpenAI-compatible base URL。
+  - **OpenAI** — 使用 `https://api.openai.com/v1`（默认），默认模型为 `gpt-4o-mini`。
+  - **Custom** — 在 `Custom Endpoint` 中填写你自己的 OpenAI-compatible base URL。此时**必须**显式设置模型：
+    - 在 `Model` 中选择 `🛠 Custom`，并在 `Custom Model` 中填写你的 provider 的模型 ID（例如 `qwen/qwen3.5-397b-a17b`、`claude-3-5-sonnet-20241022`）。
+    - 或使用 **Pick Model**（见下文）从你的 endpoint 拉取并选择可用模型。
 - `Model` 在 Settings 下拉选择。
 - 如需使用任意模型 ID，选择 `Custom` 并填写 `Custom Model`。
 
@@ -308,7 +312,7 @@ AI Reply 会把选中文本、可选补充要求、可选 Mail.app 线程上下�
 |---|---|
 | Missing API key | 设置 `API Key`、`API Key File` 或 `AI_REPLY_API_KEY`。 |
 | HTTP 401/403 | key 无效、过期，或没有对应模型权限。 |
-| HTTP 404 | endpoint 或模型名称不适用于当前 provider。 |
+| HTTP 404 | endpoint 或模型名称不适用于当前 provider。使用 Custom Endpoint 时必须显式设置模型。 |
 | HTTP 429 | 触发限速；key cooldown / retry 会自动介入。 |
 | 窗口消失或不弹出 | 查看 `~/Library/Logs/AIReplyPopClip/last_dialog.log`。 |
 | Mail.app 上下文为空 | 授权 Automation/Accessibility，并确保 Mail.app 在前台。 |

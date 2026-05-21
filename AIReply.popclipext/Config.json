@@ -141,13 +141,13 @@
         "Z-AI GLM5",
         "Bytedance Seed-OSS 36B"
       ],
-      "description": "Pick from the list, or choose '🛠 Custom' and type any model id in Custom Model."
+      "description": "Pick from the list, or choose '🛠 Custom' and type any model id in Custom Model. When using a Custom Endpoint, you must select '🛠 Custom' and fill in Custom Model, or use Pick Model to choose from your endpoint."
     },
     {
       "identifier": "model_custom",
       "type": "string",
       "label": "Custom Model",
-      "description": "Used only when Model is set to '🛠 Custom'. Type any model id (e.g. claude-3-5-sonnet-20241022)."
+      "description": "Required when Model is '🛠 Custom' or when using a Custom Endpoint. Type any model id (e.g. claude-3-5-sonnet-20241022, qwen/qwen3.5-397b-a17b)."
     },
     {
       "identifier": "temperature",
