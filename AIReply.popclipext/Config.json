@@ -25,11 +25,26 @@
       "description": "Path to a file containing the API key (first non-empty line is used). Recommended over storing the key in PopClip preferences."
     },
     {
+      "identifier": "endpoint_preset",
+      "type": "multiple",
+      "label": "Endpoint Preset",
+      "defaultValue": "openai",
+      "values": [
+        "openai",
+        "custom"
+      ],
+      "valueLabels": [
+        "OpenAI (https://api.openai.com/v1)",
+        "Custom"
+      ],
+      "description": "Choose a preset endpoint or select Custom to enter your own."
+    },
+    {
       "identifier": "endpoint",
       "type": "string",
-      "label": "Endpoint",
-      "defaultValue": "https://ai.hybgzs.com/v1",
-      "description": "Base URL for an OpenAI-compatible chat-completions endpoint. No trailing slash."
+      "label": "Custom Endpoint",
+      "defaultValue": "",
+      "description": "Required when Endpoint Preset is Custom. Base URL for an OpenAI-compatible chat-completions endpoint. No trailing slash."
     },
     {
       "identifier": "api_key_pool_file",

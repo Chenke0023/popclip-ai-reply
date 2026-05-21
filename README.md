@@ -21,11 +21,11 @@ It is designed for quick email and message replies: select text, click **AI Repl
 
 ### Demo
 
-Add release screenshots or GIFs here before announcing broadly:
+![AI Reply demo](assets/demo.gif)
 
-- `assets/demo.gif` — select text → PopClip → generated reply
-- `assets/settings.png` — extension Settings
-- `assets/follow-up.png` — Follow Up refinement
+| Settings | Follow Up |
+|---|---|
+| ![Settings screenshot](assets/settings.png) | ![Follow Up screenshot](assets/follow-up.png) |
 
 ### Installation
 
@@ -33,7 +33,7 @@ Add release screenshots or GIFs here before announcing broadly:
 2. Double-click the file to install it in PopClip.
 3. Open PopClip Settings and configure:
    - `API Key`, or `API Key File`
-   - `Endpoint`
+   - `Endpoint Preset` (OpenAI or Custom)
    - `Model`, or `Custom Model`
    - optional `API Key Pool File`
 
@@ -74,7 +74,9 @@ chmod 600 ~/.config/popclip-aireply/api_key
 
 #### Endpoint And Model
 
-- `Endpoint` should be an OpenAI-compatible API base URL, for example `https://api.openai.com/v1`.
+- `Endpoint Preset`:
+  - **OpenAI** — uses `https://api.openai.com/v1` (default).
+  - **Custom** — enter your own OpenAI-compatible base URL in `Custom Endpoint`.
 - `Model` is selected from Settings.
 - Choose `Custom` and fill `Custom Model` to use any provider-specific model id.
 
@@ -164,7 +166,7 @@ The release artifact is written to `dist/AIReply-v0.1.0.popclipextz`.
 - macOS + PopClip only.
 - Mail.app thread context depends on local AppleScript permissions and Mail.app UI state.
 - OpenAI-compatible providers may return provider-specific model names and errors.
-- Demo screenshots/GIFs are not included yet.
+- Demo screenshots are captured from local PopClip and macOS dialog windows with sample email text.
 
 ### License
 
@@ -189,11 +191,11 @@ AI Reply 是一个 macOS [PopClip](https://www.popclip.app/) 扩展，可以基�
 
 ### 演示
 
-正式推广前建议补充截图或 GIF：
+![AI Reply 演示](assets/demo.gif)
 
-- `assets/demo.gif` — 选中文本 → PopClip → 生成回复
-- `assets/settings.png` — 扩展设置界面
-- `assets/follow-up.png` — Follow Up 改写界面
+| 设置界面 | Follow Up 改写 |
+|---|---|
+| ![设置界面截图](assets/settings.png) | ![Follow Up 截图](assets/follow-up.png) |
 
 ### 安装
 
@@ -201,7 +203,7 @@ AI Reply 是一个 macOS [PopClip](https://www.popclip.app/) 扩展，可以基�
 2. 双击文件安装到 PopClip。
 3. 打开 PopClip Settings，至少配置：
    - `API Key` 或 `API Key File`
-   - `Endpoint`
+   - `Endpoint Preset`（OpenAI 或 Custom）
    - `Model` 或 `Custom Model`
    - 可选：`API Key Pool File`
 
@@ -242,7 +244,9 @@ chmod 600 ~/.config/popclip-aireply/api_key
 
 #### Endpoint 和模型
 
-- `Endpoint` 填 OpenAI-compatible API base URL，例如 `https://api.openai.com/v1`。
+- `Endpoint Preset`：
+  - **OpenAI** — 使用 `https://api.openai.com/v1`（默认）。
+  - **Custom** — 在 `Custom Endpoint` 中填写你自己的 OpenAI-compatible base URL。
 - `Model` 在 Settings 下拉选择。
 - 如需使用任意模型 ID，选择 `Custom` 并填写 `Custom Model`。
 
@@ -332,7 +336,7 @@ zsh package.sh 0.1.0
 - 仅支持 macOS + PopClip。
 - Mail.app 线程上下文依赖本地 AppleScript 权限和 Mail.app UI 状态。
 - 不同 OpenAI-compatible provider 的模型名称和错误格式可能不同。
-- Demo GIF / 截图尚未补齐。
+- Demo 截图来自本地 PopClip 和 macOS 对话框窗口，内容使用示例邮件文本。
 
 ### License
 

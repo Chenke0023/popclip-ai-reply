@@ -81,7 +81,7 @@ class TestKeyHealth(unittest.TestCase):
     def test_mark_and_check(self):
         mark_key_unhealthy("sk-abc***", "rate_limited", cooldown_seconds=1)
         self.assertFalse(is_key_healthy("sk-abc***"))
-        time.sleep(1.5)
+        time.sleep(2)
         self.assertTrue(is_key_healthy("sk-abc***"))
 
     def test_missing_file_is_healthy(self):

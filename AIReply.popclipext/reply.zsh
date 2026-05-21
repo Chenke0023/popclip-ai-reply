@@ -11,6 +11,7 @@ set -u
 
 api_key="${POPCLIP_OPTION_API_KEY:-}"
 api_key_file_raw="${POPCLIP_OPTION_API_KEY_FILE:-}"
+endpoint_preset="${POPCLIP_OPTION_ENDPOINT_PRESET:-openai}"
 endpoint="${POPCLIP_OPTION_ENDPOINT:-}"
 api_key_pool="${POPCLIP_OPTION_API_KEY_POOL:-}"
 api_key_pool_file_raw="${POPCLIP_OPTION_API_KEY_POOL_FILE:-}"
@@ -405,8 +406,16 @@ if [[ -n "${api_key_pool//[[:space:]]/}" ]]; then
   has_pool=true
 fi
 
+# Resolve endpoint from preset or custom field.
+if [[ -z "${endpoint}" ]]; then
+  case "${endpoint_preset}" in
+    openai) endpoint="https://api.openai.com/v1" ;;
+    *)      endpoint="" ;;
+  esac
+fi
+
 if [[ "${has_pool}" == "false" ]]; then
-  [[ -z "${endpoint}" ]] && endpoint="https://ai.hybgzs.com/v1"
+  [[ -z "${endpoint}" ]] && error_exit "Missing endpoint. Choose an Endpoint Preset or enter a Custom Endpoint."
   [[ -z "${api_key}" ]] && error_exit "Missing API key. Set one in PopClip settings or save to ~/.config/popclip-aireply/api_key"
 fi
 

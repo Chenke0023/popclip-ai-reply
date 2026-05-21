@@ -13,7 +13,14 @@ debug_dir="${HOME}/Library/Logs/AIReplyPopClip"
 
 mkdir -p "${config_dir}" "${debug_dir}" 2>/dev/null || true
 
-endpoint="${POPCLIP_OPTION_ENDPOINT:-https://ai.hybgzs.com/v1}"
+endpoint_preset="${POPCLIP_OPTION_ENDPOINT_PRESET:-openai}"
+endpoint="${POPCLIP_OPTION_ENDPOINT:-}"
+if [[ -z "${endpoint}" ]]; then
+  case "${endpoint_preset}" in
+    openai) endpoint="https://api.openai.com/v1" ;;
+    *)      endpoint="" ;;
+  esac
+fi
 endpoint="${endpoint%/}"
 
 # ---------- helpers ----------

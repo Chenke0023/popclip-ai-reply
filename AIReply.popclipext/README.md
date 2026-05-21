@@ -8,7 +8,7 @@
 
 1. 从 [Releases](../../releases) 下载 `AIReply-vX.Y.Z.popclipextz`，双击安装。
 2. 在 PopClip 设置中至少配置：
-   - `Endpoint`（默认 `https://ai.hybgzs.com/v1`）
+   - `Endpoint Preset`（默认 OpenAI，也可选择 Custom 输入自己的 endpoint）
    - `Model`（在 Settings 下拉选择，或用 Custom Model）
    - `API Key`，或把密钥写入 `~/.config/popclip-aireply/api_key`（推荐）
 
