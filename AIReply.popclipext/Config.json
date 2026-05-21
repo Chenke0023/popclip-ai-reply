@@ -161,16 +161,18 @@
       "identifier": "reply_style",
       "type": "multiple",
       "label": "✨ Default Style",
-      "defaultValue": "professional",
-      "values": ["professional", "friendly", "concise"],
-      "valueLabels": ["正式 Professional", "友好 Friendly", "简洁 Concise"]
-    },
-    {
-      "identifier": "prompt_style_selection",
-      "type": "boolean",
-      "label": "🎯 Prompt Before Each Reply",
-      "defaultValue": true,
-      "description": "Show a dialog before generating, letting you add extra instructions and override the style. Uncheck to generate immediately with the default style."
+      "defaultValue": "concise",
+      "values": [
+        "professional",
+        "friendly",
+        "concise"
+      ],
+      "valueLabels": [
+        "正式 Professional",
+        "友好 Friendly",
+        "简洁 Concise"
+      ],
+      "description": "Default reply style used by AI Reply and Follow Up. Change this in Settings instead of choosing style every time."
     },
     {
       "identifier": "auto_copy",
@@ -225,42 +227,6 @@
       "interpreter": "/bin/zsh",
       "stdin": "markdown",
       "icon": "square filled symbol:arrowshape.turn.up.left"
-    },
-    {
-      "title": "AI Reply — Professional",
-      "after": "ignore",
-      "shellScriptFile": "reply.zsh",
-      "interpreter": "/bin/zsh",
-      "stdin": "markdown",
-      "icon": "square filled symbol:arrowshape.turn.up.left",
-      "options": {
-        "prompt_style_selection": false,
-        "reply_style": "professional"
-      }
-    },
-    {
-      "title": "AI Reply — Friendly",
-      "after": "ignore",
-      "shellScriptFile": "reply.zsh",
-      "interpreter": "/bin/zsh",
-      "stdin": "markdown",
-      "icon": "square filled symbol:arrowshape.turn.up.left",
-      "options": {
-        "prompt_style_selection": false,
-        "reply_style": "friendly"
-      }
-    },
-    {
-      "title": "AI Reply — Concise",
-      "after": "ignore",
-      "shellScriptFile": "reply.zsh",
-      "interpreter": "/bin/zsh",
-      "stdin": "markdown",
-      "icon": "square filled symbol:arrowshape.turn.up.left",
-      "options": {
-        "prompt_style_selection": false,
-        "reply_style": "concise"
-      }
     },
     {
       "title": "Pick Model",

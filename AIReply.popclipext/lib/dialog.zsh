@@ -153,43 +153,22 @@ APPLESCRIPT
 
 prompt_follow_up() {
   log_dialog "prompt_follow_up starting"
-  local btn_prof="正式 Professional"
-  local btn_friend="友好 Friendly"
-  local btn_concise="简洁 Concise"
-
-  local default_btn="${btn_prof}"
-  case "${reply_style}" in
-    friendly) default_btn="${btn_friend}" ;;
-    concise)  default_btn="${btn_concise}" ;;
-  esac
-
   local out_tmp
   out_tmp="$(mktemp -t aireply.followup.XXXXXX)"
 
   AI_REPLY_OUT_FILE="${out_tmp}" \
-  AI_REPLY_BTN_PROF="${btn_prof}" \
-  AI_REPLY_BTN_FRIEND="${btn_friend}" \
-  AI_REPLY_BTN_CONCISE="${btn_concise}" \
-  AI_REPLY_DEFAULT_BTN="${default_btn}" \
   osascript <<'APPLESCRIPT'
 on getenv(varName)
   return do shell script "/bin/sh -c 'printf %s \"$" & varName & "\"'"
 end getenv
 
 set outFile to my getenv("AI_REPLY_OUT_FILE")
-set btnProf to my getenv("AI_REPLY_BTN_PROF")
-set btnFriend to my getenv("AI_REPLY_BTN_FRIEND")
-set btnConcise to my getenv("AI_REPLY_BTN_CONCISE")
-set defaultBtn to my getenv("AI_REPLY_DEFAULT_BTN")
-
-set dlg to display dialog "输入追加要求（例如：更短、更礼貌、补充时间点…），并点击风格按钮发送（ESC取消）：" default answer "" buttons {btnProf, btnFriend, btnConcise} default button defaultBtn with title "AI Reply — Follow Up"
-set btn to button returned of dlg
+set dlg to display dialog "输入追加要求（例如：更短、更礼貌、补充时间点…）。回复风格使用 Settings 里的 Default Style。" default answer "" buttons {"取消", "发送"} default button "发送" cancel button "取消" with title "AI Reply — Follow Up"
 set txt to text returned of dlg
 
-set payload to btn & linefeed & txt
 set fh to open for access POSIX file outFile with write permission
 set eof of fh to 0
-write payload to fh as «class utf8»
+write txt to fh as «class utf8»
 close access fh
 APPLESCRIPT
   local rc=$?
@@ -199,18 +178,8 @@ APPLESCRIPT
   fi
   local res="$(cat "${out_tmp}")"
   rm -f "${out_tmp}" 2>/dev/null
-
-  local lines=("${(@f)res}")
-  local res_btn="${lines[1]}"
-  local res_txt="${(j:\n:)lines[2,-1]}"
-
-  case "${res_btn}" in
-    "${btn_friend}")   reply_style="friendly" ;;
-    "${btn_concise}")  reply_style="concise" ;;
-    *)                 reply_style="professional" ;;
-  esac
-  log_dialog "prompt_follow_up submitted; style=${reply_style}; chars=${#res_txt}"
-  print -r -- "${res_txt}"
+  log_dialog "prompt_follow_up submitted; style=${reply_style}; chars=${#res}"
+  print -r -- "${res}"
 }
 
 show_processing_notice() {

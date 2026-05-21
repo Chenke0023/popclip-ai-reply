@@ -20,8 +20,7 @@ user_prompt="${POPCLIP_OPTION_PROMPT:-}"
 system_prompt="${POPCLIP_OPTION_SYSTEM_PROMPT:-}"
 
 auto_language="${POPCLIP_OPTION_AUTO_LANGUAGE:-true}"
-reply_style="${POPCLIP_OPTION_REPLY_STYLE:-professional}"
-prompt_style_selection="${POPCLIP_OPTION_PROMPT_STYLE_SELECTION:-true}"
+reply_style="${POPCLIP_OPTION_REPLY_STYLE:-concise}"
 auto_copy="${POPCLIP_OPTION_AUTO_COPY:-true}"
 mail_thread_context="${POPCLIP_OPTION_MAIL_THREAD_CONTEXT:-true}"
 show_language_badge="${POPCLIP_OPTION_SHOW_LANGUAGE_BADGE:-true}"
@@ -66,50 +65,28 @@ expand_path() {
 # --------------------------- dialogs (AppleScript) ---------------------
 
 prompt_for_runtime_instructions() {
-  if [[ "${AI_REPLY_HEADLESS:-}" == "1" || "${prompt_style_selection}" != "true" ]]; then
+  if [[ "${AI_REPLY_HEADLESS:-}" == "1" ]]; then
     runtime_prompt=""
     return 0
   fi
-
-  local btn_prof="正式 Professional"
-  local btn_friend="友好 Friendly"
-  local btn_concise="简洁 Concise"
-
-  local default_btn="${btn_prof}"
-  case "${reply_style}" in
-    friendly) default_btn="${btn_friend}" ;;
-    concise)  default_btn="${btn_concise}" ;;
-  esac
 
   local out_tmp
   out_tmp="$(mktemp -t aireply.runtime.XXXXXX)"
 
   AI_REPLY_OUT_FILE="${out_tmp}" \
-  AI_REPLY_BTN_PROF="${btn_prof}" \
-  AI_REPLY_BTN_FRIEND="${btn_friend}" \
-  AI_REPLY_BTN_CONCISE="${btn_concise}" \
-  AI_REPLY_DEFAULT_BTN="${default_btn}" \
   osascript <<'APPLESCRIPT' 2>/dev/null
--- system attribute returns Latin-1 / MacRoman for short ASCII-only strings; for
--- multibyte (Chinese button labels) we re-encode via the do-shell-script bridge.
 on getenv(varName)
   return do shell script "/bin/sh -c 'printf %s \"$" & varName & "\"'"
 end getenv
 
-set btnProf to my getenv("AI_REPLY_BTN_PROF")
-set btnFriend to my getenv("AI_REPLY_BTN_FRIEND")
-set btnConcise to my getenv("AI_REPLY_BTN_CONCISE")
-set defaultBtn to my getenv("AI_REPLY_DEFAULT_BTN")
 set outFile to my getenv("AI_REPLY_OUT_FILE")
 
-set dlg to display dialog "补充回复要求（可留空），并点击风格按钮发送 (ESC取消)：" default answer "" buttons {btnProf, btnFriend, btnConcise} default button defaultBtn with title "AI Reply"
-set btn to button returned of dlg
+set dlg to display dialog "补充回复要求（可留空）。回复风格使用 Settings 里的 Default Style。" default answer "" buttons {"取消", "发送"} default button "发送" cancel button "取消" with title "AI Reply"
 set txt to text returned of dlg
 
-set payload to btn & linefeed & txt
 set fh to open for access POSIX file outFile with write permission
 set eof of fh to 0
-write payload to fh as «class utf8»
+write txt to fh as «class utf8»
 close access fh
 APPLESCRIPT
   local rc=$?
@@ -118,21 +95,8 @@ APPLESCRIPT
     return 1
   fi
 
-  local out="$(cat "${out_tmp}")"
+  runtime_prompt="$(cat "${out_tmp}")"
   rm -f "${out_tmp}" 2>/dev/null
-
-  local lines=("${(@f)out}")
-  local res_btn="${lines[1]}"
-  shift lines
-  local res_txt="${(j:\n:)lines}"
-
-  case "${res_btn}" in
-    "${btn_friend}")   reply_style="friendly" ;;
-    "${btn_concise}")  reply_style="concise" ;;
-    *)                 reply_style="professional" ;;
-  esac
-
-  runtime_prompt="${res_txt}"
   return 0
 }
 
@@ -528,7 +492,7 @@ fi
 # Normalize style.
 case "${reply_style}" in
   professional|friendly|concise) ;;
-  *) reply_style="professional" ;;
+  *) reply_style="concise" ;;
 esac
 
 if ! prompt_for_runtime_instructions; then
