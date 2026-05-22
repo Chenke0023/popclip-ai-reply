@@ -86,6 +86,14 @@ chmod 600 ~/.config/popclip-aireply/api_key
 
 Third-party OpenAI-compatible gateways may differ in available models, error formats, rate limits, and streaming behavior. This extension uses non-streaming `/chat/completions` requests.
 
+#### Pick Model
+
+**Pick Model** is a separate action that fetches the available model list from your configured endpoint and lets you choose one. It is useful when:
+- You are using a **Custom Endpoint** and don't know the exact model id.
+- You want to quickly switch models without editing Settings.
+
+Pick Model writes your choice to `~/.config/popclip-aireply/selected_model`, which takes priority over the Settings `Model` field. To revert to the Settings value, delete that file.
+
 #### Reply Behavior
 
 - `Default Style` controls both initial replies and Follow Up revisions.
@@ -257,6 +265,14 @@ chmod 600 ~/.config/popclip-aireply/api_key
 - 如需使用任意模型 ID，选择 `Custom` 并填写 `Custom Model`。
 
 不同第三方 OpenAI-compatible 网关在模型名称、错误格式、限速和返回行为上可能不同。本扩展使用非流式 `/chat/completions` 请求。
+
+#### Pick Model（选择模型）
+
+**Pick Model** 是一个独立动作，它会从你配置的 endpoint 拉取可用模型列表并让你选择。适用于以下场景：
+- 使用 **Custom Endpoint**，不知道准确的模型 ID。
+- 想快速切换模型，而不用每次都进 Settings 修改。
+
+Pick Model 会把选择写入 `~/.config/popclip-aireply/selected_model`，该文件优先级高于 Settings 里的 `Model` 字段。如需恢复 Settings 的值，删除该文件即可。
 
 #### 回复行为
 

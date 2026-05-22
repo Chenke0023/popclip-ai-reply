@@ -8,6 +8,9 @@ session_file="${1:-}"
 lib_dir="${0:A:h}"
 debug_dir="${HOME}/Library/Logs/AIReplyPopClip"
 mkdir -p "${debug_dir}" 2>/dev/null || true
+# Rotate old debug files to prevent accumulation.
+rm -f "${debug_dir}/last_curl_stderr.txt" "${debug_dir}/last_http_status.txt" \
+  "${debug_dir}/last_curl_exit.txt" 2>/dev/null || true
 dialog_log="${debug_dir}/last_dialog.log"
 
 log_dialog() {
@@ -347,11 +350,13 @@ time.sleep(t)
 # ------------------------------- main loop ------------------------------
 
 while true; do
-  local dlg_out="$(show_reply_dialog "${current_reply}")" || break
+  local dlg_out dlg_lines dlg_btn dlg_text followup previous_reply next_reply followup_rc
 
-  local dlg_lines=("${(@f)dlg_out}")
-  local dlg_btn="${dlg_lines[1]}"
-  local dlg_text="${(j:\n:)dlg_lines[2,-1]}"
+  dlg_out="$(show_reply_dialog "${current_reply}")" || break
+
+  dlg_lines=("${(@f)dlg_out}")
+  dlg_btn="${dlg_lines[1]}"
+  dlg_text="${(j:\n:)dlg_lines[2,-1]}"
   current_reply="${dlg_text}"
 
   case "${dlg_btn}" in
@@ -362,20 +367,21 @@ while true; do
       break
       ;;
     "Follow Up")
-      local followup="$(prompt_follow_up)" || continue
+      followup="$(prompt_follow_up)" || continue
       [[ -z "${followup//[[:space:]]/}" ]] && continue
 
       show_processing_notice
       log_dialog "follow-up API request starting; style=${reply_style}"
-      local previous_reply="${current_reply}"
-      local next_reply
+      previous_reply="${current_reply}"
       next_reply="$(generate_reply "${previous_reply}" "${followup}")"
-      local followup_rc=$?
+      followup_rc=$?
       log_dialog "follow-up API request finished; rc=${followup_rc}; reply_chars=${#next_reply}"
       if (( followup_rc != 0 )); then
         current_reply="${previous_reply}"
         log_dialog "follow-up failed; error=${next_reply}"
-        error_dialog $'Follow-up request failed. Keeping previous reply.\n\n'"${next_reply}"
+        local err_msg
+        err_msg="$(printf '%s\n\n%s' 'Follow-up request failed. Keeping previous reply.' "${next_reply}")"
+        error_dialog "${err_msg}"
         continue
       fi
       current_reply="${next_reply}"
