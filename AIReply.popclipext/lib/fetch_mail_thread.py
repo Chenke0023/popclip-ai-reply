@@ -29,7 +29,7 @@ import subprocess
 import sys
 import uuid
 
-MAX_MESSAGES = int(os.environ.get("AI_REPLY_MAIL_MAX_MESSAGES", "5"))
+MAX_MESSAGES = min(int(os.environ.get("AI_REPLY_MAIL_MAX_MESSAGES", "5")), 20)
 
 # A random separator per invocation — eliminates collision risk with
 # email body content (unlike fixed sentinel strings such as |||AIREPLY|||).

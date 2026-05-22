@@ -42,7 +42,7 @@ session_vars="$(python3 - "${session_file}" \
   system_prompt model temperature_raw auto_language reply_style \
   auto_copy show_language_badge save_history history_path \
   detected_language api_key endpoint api_key_pool \
-  api_key_pool_file_raw mail_thread_json <<'PY'
+  api_key_pool_file_raw mail_thread_json mail_thread_status <<'PY'
 import json
 import shlex
 import sys
@@ -80,6 +80,17 @@ show_reply_dialog() {
   local meta="${style_label}"
   if [[ "${show_language_badge}" == "true" && -n "${detected_language}" ]]; then
     meta="🌐 ${detected_language} | ${style_label}"
+  fi
+  # Mail thread context indicator so users know if it actually ran.
+  local mail_badge=""
+  case "${mail_thread_status}" in
+    success:*)
+      mail_badge="📬 ${mail_thread_status#success:} msgs" ;;
+    failed)
+      mail_badge="📬 unavailable" ;;
+  esac
+  if [[ -n "${mail_badge}" ]]; then
+    meta="${mail_badge} | ${meta}"
   fi
 
   local reply_tmp meta_tmp out_tmp

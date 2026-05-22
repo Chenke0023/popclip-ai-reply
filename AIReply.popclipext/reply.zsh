@@ -442,6 +442,7 @@ endpoint="${endpoint%/}"
 # fetched JSON also acts as a fallback "input" further down so the rest of
 # the pipeline (language detection, dialogs, …) is unchanged.
 mail_thread_json=""
+mail_thread_status=""   # ""=not attempted, "success:N", "failed"
 if [[ "${mail_thread_context}" == "true" ]]; then
   front_app="$(osascript -e \
     'tell application "System Events" to get name of first process whose frontmost is true' \
@@ -451,6 +452,12 @@ if [[ "${mail_thread_context}" == "true" ]]; then
       python3 "${lib_dir}/fetch_mail_thread.py" 2>>"${debug_dir}/mail_thread_fetch.log")"
     if (( $? != 0 )) || [[ -z "${mail_thread_json}" ]]; then
       mail_thread_json=""
+      mail_thread_status="failed"
+    else
+      local tc
+      tc="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(len(d.get('thread',[])))" \
+        "${mail_thread_json}" 2>/dev/null)"
+      mail_thread_status="success:${tc:-0}"
     fi
   fi
 fi
@@ -528,6 +535,7 @@ if [[ "${AI_REPLY_HEADLESS:-}" != "1" ]]; then
   export _AIR_SESS_LIB_DIR="${lib_dir}"
   export _AIR_SESS_DEBUG_DIR="${debug_dir}"
   export _AIR_SESS_MAIL_THREAD_JSON="${mail_thread_json}"
+  export _AIR_SESS_MAIL_THREAD_STATUS="${mail_thread_status}"
 
   python3 -c "
 import json, os
@@ -554,6 +562,7 @@ data = {
   'lib_dir': os.environ.get('_AIR_SESS_LIB_DIR', ''),
   'debug_dir': os.environ.get('_AIR_SESS_DEBUG_DIR', ''),
   'mail_thread_json': os.environ.get('_AIR_SESS_MAIL_THREAD_JSON', ''),
+  'mail_thread_status': os.environ.get('_AIR_SESS_MAIL_THREAD_STATUS', ''),
 }
 print(json.dumps(data))
 " > "${session_tmp}"
