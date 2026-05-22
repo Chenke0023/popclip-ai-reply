@@ -130,7 +130,10 @@ call_api() {
   } > "${request_info_file}" 2>/dev/null || true
 
   local http_status curl_exit
+  local -a curl_proxy_args
+  curl_proxy_args=("${(@f)$(macos_curl_proxy_args)}")
   http_status="$(curl -sS \
+    "${curl_proxy_args[@]}" \
     --compressed \
     --connect-timeout 10 \
     --max-time 90 \
@@ -149,8 +152,15 @@ call_api() {
   print -r -- "${curl_exit}" > "${debug_dir}/last_curl_exit.txt" 2>/dev/null || true
 
   # curl-level failure (network/DNS/TLS) — retryable.
+  # Include curl's own stderr diagnostics (e.g. SSL error details).
   if (( curl_exit != 0 )); then
-    print -r -- "Network error: curl exit ${curl_exit} (HTTP ${http_status:-?})"
+    local curl_msg
+    curl_msg="$(tr '\n' ' ' < "${debug_dir}/last_curl_stderr.txt" 2>/dev/null | xargs)"
+    if [[ -n "${curl_msg}" ]]; then
+      print -r -- "Network error: curl exit ${curl_exit}. ${curl_msg}"
+    else
+      print -r -- "Network error: curl exit ${curl_exit} (HTTP ${http_status:-?})"
+    fi
     return 1
   fi
 
@@ -301,7 +311,12 @@ error_exit() {
       suggestion="Server-side error. Usually transient — try again shortly." ;;
     *"timeout"*|*"timed out"*|*"network error"*|*"connection"*)
       error_type="network"
-      suggestion="Network problem. Check connection / VPN / endpoint reachability." ;;
+      local ssl_suggestion=""
+      case "${msg_lower}" in
+        *"exit 35"*|*"ssl"*|*"tls"*|*"handshake"*|*"certificate"*|*"exit 60"*)
+          ssl_suggestion=" (SSL/TLS handshake failed — check if the endpoint URL uses HTTPS correctly, or if a proxy/VPN is intercepting TLS)" ;;
+      esac
+      suggestion="Network problem. Check connection / VPN / endpoint reachability.${ssl_suggestion}" ;;
     *"empty response"*|*"empty model"*)
       error_type="response"
       suggestion="Server returned nothing. Try a different model or prompt." ;;

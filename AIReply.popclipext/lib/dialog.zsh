@@ -228,7 +228,10 @@ call_api() {
   fi
 
   local http_status curl_exit
+  local -a curl_proxy_args
+  curl_proxy_args=("${(@f)$(macos_curl_proxy_args)}")
   http_status="$(curl -sS \
+    "${curl_proxy_args[@]}" \
     --compressed \
     --connect-timeout 10 \
     --max-time 90 \
@@ -247,7 +250,7 @@ call_api() {
 
   if (( curl_exit != 0 )); then
     local curl_msg
-    curl_msg="$(cat "${curl_stderr_file}" 2>/dev/null)"
+    curl_msg="$(tr '\n' ' ' < "${curl_stderr_file}" 2>/dev/null | xargs)"
     if [[ -n "${curl_msg}" ]]; then
       print -r -- "Network error: curl exit ${curl_exit}. ${curl_msg}"
     else

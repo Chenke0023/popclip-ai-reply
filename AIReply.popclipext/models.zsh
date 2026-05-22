@@ -125,7 +125,10 @@ do_fetch_models() {
   rm -f "${body_file}" 2>/dev/null || true
 
   local http_status
+  local -a curl_proxy_args
+  curl_proxy_args=("${(@f)$(macos_curl_proxy_args)}")
   http_status="$(curl -sS \
+    "${curl_proxy_args[@]}" \
     --compressed \
     --connect-timeout 10 \
     --max-time 30 \
